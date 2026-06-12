@@ -1,0 +1,17 @@
+---
+title: "CDAT 4001 — Data Science"
+---
+
+Course site under construction. Lessons appear here, grouped by unit, as they are
+published through the authoring workflow.
+
+| Unit | Module | Status |
+|------|--------|--------|
+| I — Introduction | `u01_introduction` | pending |
+| II — Big Data | `u02_big_data` | pending |
+| III — EDA | `u03_eda` | pending |
+| IV — Data Mining | `u04_data_mining` | pending |
+| V — Visualization | `u05_visualization` | pending |
+| VI — Recommender Systems | `u06_recommender_systems` | pending |
+| VII — Social Networks | `u07_social_networks` | pending |
+| VIII — Governance | `u08_governance` | pending |

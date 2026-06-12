@@ -1,0 +1,102 @@
+---
+title: "CSV vs Parquet: Choosing a Storage Format"
+unit: "II"
+lesson: "03"
+type: concept
+tags: [csv, parquet, columnar, compression, storage]
+difficulty: introductory
+duration: "45 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Contrast** CSV (text, row-oriented) with Parquet (binary, columnar) on size, speed, and schema. *(Analyze)*
+- **Predict** which format wins for a given workload, and justify it. *(Evaluate)*
+
+> **Where this sits:** after **L02 — Databases & SQL** · before **L04 — JSON & Web APIs** · closes the flat-file part of Unit II.
+
+> **Hands-on:** [Lab — Measuring CSV vs Parquet](l03_lab_benchmark_formats.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u02_big_data/l03_lab_benchmark_formats.ipynb)
+
+## Why This Matters
+
+You'll save and reload datasets constantly. The format you choose changes **how big the
+file is** and **how fast every later query runs** — at no cost to you except picking the
+right one. CSV is the universal exchange format; Parquet is the analytics workhorse.
+Knowing when to use which is a small decision that pays off on every project.
+
+::: {.callout-tip title="Analogy"}
+CSV is a handwritten ledger — anyone can read it line by line, but finding a total means
+reading every page. Parquet is a card catalog organized by column with an index: compact
+and instantly searchable — as long as you have the right reader.
+:::
+
+## The Shared Task
+
+Store a **1-million-row transactions table** (`txn_id, store_id, category, amount, ts`)
+and answer one question: *average amount by category*. Same data, same query — only the
+**format** changes. (This is the fair-comparison rule: if the task differed, the numbers
+would mean nothing.)
+
+## Approach A — CSV (text, row-oriented)
+
+Plain text, one record per line, comma-separated. **Strengths:** universal — every tool
+and human can read it. **Costs:** everything is stored as text (types are *re-inferred on
+every read*), there's no compression, and to answer a one-column question the engine must
+read **every byte of every column**, however few the query needs — the row-store behavior
+you saw in L02, now on disk.
+
+## Approach B — Parquet (binary, columnar)
+
+A binary format that stores data **by column**, with types and per-column compression
+(dictionary encoding for repetitive values, run-length encoding). **Strengths:** to
+average one column it reads **only that column**, already typed and compressed; per-column
+statistics let it skip irrelevant chunks entirely. **Costs:** binary — not human-readable,
+and you need a Parquet-aware reader (pandas, DuckDB, Spark — not a text editor).
+
+## Side-by-Side
+
+| Dimension | CSV | Parquet |
+|-----------|-----|---------|
+| Layout | row-oriented | **column-oriented** |
+| Encoding | text | binary, typed |
+| Compression | none | **per-column (often 2–5x)** |
+| Column scan (`AVG(amount) … GROUP BY category`) | reads all five columns | **reads only the two the query needs** |
+| Human-readable | yes | no (needs a reader) |
+| Schema/types preserved | no (re-inferred) | yes |
+| Ubiquity | everything | data tools only |
+| Best at | interchange, hand-editing | repeated analytics at scale |
+
+## Which to Choose When
+
+- **CSV** when: exchanging data with anyone, tiny datasets, a human must read or hand-edit
+  it, or the receiving tool only accepts text.
+- **Parquet** when: you'll analyze it more than once, it's large, your queries touch a few
+  columns, or it feeds a pipeline.
+- In the lab you'll **measure** the gap on this dataset: roughly **3x smaller** and
+  **10x+ faster** column queries (exact numbers are machine-dependent; the ratios are
+  stable).
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- CSV = text/row vs Parquet = binary/columnar/compressed <!-- obj 1 · Understand · Moodle MC -->
+- *Why* columnar is faster for a one-column aggregate (reads only that column) <!-- obj 1 · Analyze · Moodle MC -->
+- Pick the right format for a described workload <!-- obj 2 · Evaluate · Moodle MC -->
+
+## FAQ / Industry Reality
+
+**"Can I open a Parquet file in Excel?"** — Not directly; it's binary. Open it with pandas
+or DuckDB. That readability tradeoff is exactly the price you pay for the size and speed.
+
+**"Is Parquet always the better choice?"** — For repeated analytics, usually. But for a
+50-row config file, or anything a human needs to read or hand-edit, CSV's simplicity wins.
+Match the format to the job.
+
+## Where to Go Deeper
+
+- **Official docs:** [Apache Parquet — file format](https://parquet.apache.org/docs/file-format/) · [DuckDB — Reading and Writing Parquet](https://duckdb.org/docs/stable/data/parquet/overview).
+- **Explainer:** [DuckDB blog — querying Parquet efficiently](https://duckdb.org/2021/06/25/querying-parquet.html) — the per-column-scan story, tied back to L02's row-vs-column picture.

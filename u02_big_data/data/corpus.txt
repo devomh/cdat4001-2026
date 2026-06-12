@@ -1,0 +1,7 @@
+Data science is the disciplined process for getting from a fuzzy question
+to a defensible answer. The process is a loop: question, acquire, clean, explore,
+communicate. Most of the work is not modeling. The data lives in files, in databases,
+and behind web APIs. The format you choose changes the size of the data and the speed
+of every query. When the data outgrows one machine, the work must be split across many
+machines, and the answer must be assembled from the pieces. Splitting the work and
+assembling the answer is the whole idea of computing at scale.

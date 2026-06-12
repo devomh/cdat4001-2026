@@ -1,0 +1,141 @@
+---
+title: "What Is Data Science? The Process and the Landscape"
+unit: "I"
+lesson: "01"
+type: concept
+tags: [data-science, process, data-sources, overview]
+difficulty: introductory
+duration: "50 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Distinguish** data science from machine learning, statistics, and data engineering. *(Understand)*
+- **Classify** a data source as structured, semi-structured, or unstructured. *(Analyze)*
+- **Trace** a real question through the five stages of the data-science process. *(Apply)*
+
+> **Where this sits:** first lesson of the course · before **L02 — Databases & SQL with DuckDB**.
+
+## Why This Matters
+
+Start from a question you actually care about:
+
+> *Which Humacao-area municipality had the worst air quality last year — and how sure can we be?*
+
+You can't answer that from intuition. The data lives in several places, in formats that
+don't match, with gaps and errors. **Data science is the disciplined process for getting
+from a fuzzy question to a defensible answer** — and often to a *product*: a chart, a
+dashboard, a recommendation.
+
+::: {.callout-tip title="Analogy"}
+A data scientist is like an investigative journalist. The story — the insight — is only as
+trustworthy as the sourcing, the fact-checking, and how clearly it's presented. The model
+is just one paragraph of the article.
+:::
+
+## The Landscape
+
+### What "data science" actually is
+
+A multidisciplinary field at the intersection of **mathematics, statistics, and computer
+science**, aimed at the *systematic extraction of knowledge from data*. It overlaps with
+its neighbors but isn't any one of them:
+
+| Field | Core question | Emphasis |
+|-------|---------------|----------|
+| **Statistics** | "Is this effect real?" | inference, uncertainty, study design |
+| **Machine learning** | "Can I predict Y from X?" | predictive accuracy, generalization |
+| **Data engineering** | "Can I move/store this reliably at scale?" | pipelines, storage, availability |
+| **Data science** | "What should we *do* about this question?" | the whole loop: acquire, then decide, then communicate |
+
+### The data-science process
+
+Most of the work is *not* modeling. The process is a loop, not a line — findings at any
+stage send you back:
+
+```{mermaid}
+flowchart LR
+    Q[1. Question] --> A[2. Acquire] --> C[3. Clean] --> E[4. Explore / Model] --> K[5. Communicate]
+    E -. new questions .-> Q
+    C -. data gaps .-> A
+```
+
+| Stage | You produce | This course's units |
+|-------|-------------|---------------------|
+| **1. Question** | a sharp, answerable question | I |
+| **2. Acquire** | raw data from files, DBs, APIs, the web | II (Big Data) |
+| **3. Clean** | a tidy, validated table | III (EDA) |
+| **4. Explore / Model** | patterns, summaries, simple models | III–IV, VI–VII |
+| **5. Communicate** | a chart, map, or data product | V (Visualization), VIII (Governance) |
+
+### Where data comes from
+
+| Shape | Examples | How you read it |
+|-------|----------|-----------------|
+| **Structured** | relational DBs, CSV, Parquet | SQL, pandas |
+| **Semi-structured** | JSON, web APIs, log files | parsers, `json`, `requests` |
+| **Unstructured** | free text, images, audio | natural-language / computer-vision preprocessing |
+
+## Anchor — the Process on One Real Question
+
+Tracing the air-quality question through the five stages:
+
+1. **Question:** "Rank Humacao-region municipalities by mean PM2.5 (fine-particle air
+   pollution) in 2024; flag any with <60% data coverage."
+2. **Acquire:** pull station readings (a CSV export or an API) — *the subject of L02–L05*.
+3. **Clean:** drop sensor-error rows, align timestamps, handle missing days.
+4. **Explore:** group by municipality, average, rank.
+5. **Communicate:** a ranked bar chart with a confidence caveat for low-coverage towns.
+
+The *modeling* here is a single `GROUP BY ... AVG`. The hard, valuable parts are framing
+the question, getting the data, and being honest about coverage — which is the point of
+this whole course.
+
+```python
+# Illustrative only (read-only). The full pipeline is built across L02–L05.
+import pandas as pd
+readings = pd.read_csv("aq_2024.csv")                 # 2. acquire
+clean = readings.query("pm25 >= 0 and pm25 < 600")    # 3. clean (drop sensor errors)
+rank = (clean.groupby("municipality")["pm25"]         # 4. explore
+             .agg(mean_pm25="mean", coverage="count")
+             .sort_values("mean_pm25", ascending=False))
+```
+
+## Discussion (do this now — think · pair · share)
+
+Pick a question about *your* town or a campus you know. Then, on paper:
+
+1. Map it to the five stages.
+2. Name one realistic **data source** for stage 2, and one likely **data-quality problem**
+   you'd hit in stage 3.
+3. Decide what the stage-5 *product* should be (chart? table? a single number with a caveat?).
+
+Share with a neighbor; we'll collect three examples.
+
+## Quiz Hooks
+
+*The 2–3 things to retain — these feed the retrieval quiz at the start of L02.*
+
+- The **five stages** of the DS process, in order <!-- obj 3 · Understand · Moodle MC -->
+- **Classify** data as structured / semi-structured / unstructured <!-- obj 2 · Analyze · Moodle MC -->
+- **DS is not ML**: most DS work is acquire + clean + communicate <!-- obj 1 · Understand · Moodle MC -->
+
+## FAQ / Industry Reality
+
+**"Is data science just machine learning?"** — No. Surveys consistently put *data
+preparation* at the majority of a data scientist's time; the model is often a small,
+standard piece. A great answer to a sharp question with a simple method beats a fancy
+model on the wrong data. And being honest about how data is collected and used —
+**governance**, the subject of Unit VIII — is part of the job, not an afterthought.
+
+**"Do I need 'big data' / Spark to do data science?"** — No. Most real questions fit
+comfortably in memory (or in DuckDB on a laptop). Reach for distributed tools only when
+the data genuinely doesn't fit — we'll see where that line is in Unit II.
+
+## Where to Go Deeper
+
+- **Course text:** [VanderPlas, *Python Data Science Handbook*](https://jakevdp.github.io/PythonDataScienceHandbook/) (free online) — Ch. 1, the ecosystem.
+- **Official docs:** [pandas — "10 minutes to pandas"](https://pandas.pydata.org/docs/user_guide/10min.html) — skim now, used from L02 on.
+- **Article/process:** [Wickham & Grolemund, *R for Data Science* — "Explore" intro](https://r4ds.hadley.nz/intro) — the loop diagram, language-agnostic.

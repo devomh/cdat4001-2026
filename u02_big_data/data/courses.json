@@ -1,0 +1,720 @@
+[
+ {
+  "code": "COMP3000",
+  "title": "Advanced Databases",
+  "department": "CS",
+  "credits": 3,
+  "schedule": {
+   "days": "TTh",
+   "start": "16:00"
+  },
+  "lab_fee": 25.0
+ },
+ {
+  "code": "BUSI3001",
+  "title": "Topics in Accounting",
+  "department": "Business",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "16:00"
+  }
+ },
+ {
+  "code": "MATH3002",
+  "title": "Advanced Calculus",
+  "department": "Math",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "15:00"
+  }
+ },
+ {
+  "code": "COMP3003",
+  "title": "Topics in Networks",
+  "department": "CS",
+  "credits": 1,
+  "schedule": {
+   "days": "TTh",
+   "start": "12:00"
+  }
+ },
+ {
+  "code": "BUSI3004",
+  "title": "Topics in Accounting",
+  "department": "Business",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "14:00"
+  }
+ },
+ {
+  "code": "MATH3005",
+  "title": "Advanced Algebra",
+  "department": "Math",
+  "credits": 3,
+  "schedule": {
+   "days": "TTh",
+   "start": "18:00"
+  },
+  "prerequisites": [
+   "MATH3002"
+  ]
+ },
+ {
+  "code": "COMP3006",
+  "title": "Introduction to Programming",
+  "department": "CS",
+  "credits": 4,
+  "schedule": {
+   "days": "TTh",
+   "start": "10:00"
+  },
+  "prerequisites": [
+   "COMP3003"
+  ],
+  "lab_fee": 60.0
+ },
+ {
+  "code": "BUSI3007",
+  "title": "Advanced Marketing",
+  "department": "Business",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "09:00"
+  },
+  "prerequisites": [
+   "BUSI3004"
+  ]
+ },
+ {
+  "code": "BIOL3008",
+  "title": "Topics in Botany",
+  "department": "Biology",
+  "credits": 2,
+  "schedule": {
+   "days": "TTh",
+   "start": "07:00"
+  },
+  "lab_fee": 25.0
+ },
+ {
+  "code": "MATH3009",
+  "title": "Advanced Discrete Math",
+  "department": "Math",
+  "credits": 3,
+  "schedule": {
+   "days": "TTh",
+   "start": "07:00"
+  },
+  "prerequisites": [
+   "MATH3005"
+  ]
+ },
+ {
+  "code": "COMP3010",
+  "title": "Advanced Data Structures",
+  "department": "CS",
+  "credits": 2,
+  "schedule": {
+   "days": "MWF",
+   "start": "17:00"
+  },
+  "prerequisites": [
+   "COMP3000"
+  ]
+ },
+ {
+  "code": "COMP3011",
+  "title": "Advanced Networks",
+  "department": "CS",
+  "credits": 3,
+  "schedule": {
+   "days": "TTh",
+   "start": "09:00"
+  },
+  "prerequisites": [
+   "COMP3006"
+  ]
+ },
+ {
+  "code": "COMP3012",
+  "title": "Topics in AI",
+  "department": "CS",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "15:00"
+  },
+  "prerequisites": [
+   "COMP3003"
+  ]
+ },
+ {
+  "code": "MATH3013",
+  "title": "Introduction to Algebra",
+  "department": "Math",
+  "credits": 4,
+  "schedule": {
+   "days": "TTh",
+   "start": "09:00"
+  },
+  "prerequisites": [
+   "MATH3002"
+  ]
+ },
+ {
+  "code": "BUSI3014",
+  "title": "Topics in Marketing",
+  "department": "Business",
+  "credits": 4,
+  "schedule": {
+   "days": "MWF",
+   "start": "17:00"
+  },
+  "lab_fee": 40.0
+ },
+ {
+  "code": "COMP3015",
+  "title": "Topics in Databases",
+  "department": "CS",
+  "credits": 4,
+  "schedule": {
+   "days": "MWF",
+   "start": "09:00"
+  }
+ },
+ {
+  "code": "BIOL3016",
+  "title": "Advanced Zoology",
+  "department": "Biology",
+  "credits": 3,
+  "schedule": {
+   "days": "TTh",
+   "start": "17:00"
+  },
+  "lab_fee": 60.0
+ },
+ {
+  "code": "COMP3017",
+  "title": "Topics in Networks",
+  "department": "CS",
+  "credits": 2,
+  "schedule": {
+   "days": "MWF",
+   "start": "17:00"
+  }
+ },
+ {
+  "code": "COMP3018",
+  "title": "Introduction to Data Structures",
+  "department": "CS",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "14:00"
+  },
+  "prerequisites": [
+   "COMP3015",
+   "COMP3003"
+  ],
+  "lab_fee": 40.0
+ },
+ {
+  "code": "BUSI3019",
+  "title": "Topics in Management",
+  "department": "Business",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "07:00"
+  },
+  "prerequisites": [
+   "BUSI3001"
+  ]
+ },
+ {
+  "code": "COMP3020",
+  "title": "Topics in Networks",
+  "department": "CS",
+  "credits": 1,
+  "schedule": {
+   "days": "TTh",
+   "start": "14:00"
+  },
+  "lab_fee": 40.0
+ },
+ {
+  "code": "MATH3021",
+  "title": "Topics in Calculus",
+  "department": "Math",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "11:00"
+  },
+  "prerequisites": [
+   "MATH3013"
+  ],
+  "lab_fee": 25.0
+ },
+ {
+  "code": "MATH3022",
+  "title": "Introduction to Geometry",
+  "department": "Math",
+  "credits": 4,
+  "schedule": {
+   "days": "MWF",
+   "start": "18:00"
+  },
+  "lab_fee": 60.0
+ },
+ {
+  "code": "BIOL3023",
+  "title": "Advanced Microbiology",
+  "department": "Biology",
+  "credits": 1,
+  "schedule": {
+   "days": "TTh",
+   "start": "13:00"
+  },
+  "prerequisites": [
+   "BIOL3016"
+  ]
+ },
+ {
+  "code": "BUSI3024",
+  "title": "Advanced Management",
+  "department": "Business",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "07:00"
+  },
+  "prerequisites": [
+   "BUSI3019",
+   "BUSI3001"
+  ]
+ },
+ {
+  "code": "COMP3025",
+  "title": "Topics in Databases",
+  "department": "CS",
+  "credits": 3,
+  "schedule": {
+   "days": "TTh",
+   "start": "14:00"
+  },
+  "prerequisites": [
+   "COMP3006",
+   "COMP3012"
+  ]
+ },
+ {
+  "code": "COMP3026",
+  "title": "Introduction to Networks",
+  "department": "CS",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "16:00"
+  }
+ },
+ {
+  "code": "COMP3027",
+  "title": "Topics in Data Structures",
+  "department": "CS",
+  "credits": 4,
+  "schedule": {
+   "days": "MWF",
+   "start": "08:00"
+  },
+  "prerequisites": [
+   "COMP3015"
+  ],
+  "lab_fee": 40.0
+ },
+ {
+  "code": "BIOL3028",
+  "title": "Introduction to Zoology",
+  "department": "Biology",
+  "credits": 4,
+  "schedule": {
+   "days": "MWF",
+   "start": "15:00"
+  }
+ },
+ {
+  "code": "COMP3029",
+  "title": "Topics in Networks",
+  "department": "CS",
+  "credits": 4,
+  "schedule": {
+   "days": "MWF",
+   "start": "13:00"
+  },
+  "prerequisites": [
+   "COMP3006",
+   "COMP3003"
+  ]
+ },
+ {
+  "code": "BIOL3030",
+  "title": "Advanced Botany",
+  "department": "Biology",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "17:00"
+  }
+ },
+ {
+  "code": "COMP3031",
+  "title": "Introduction to Databases",
+  "department": "CS",
+  "credits": 4,
+  "schedule": {
+   "days": "TTh",
+   "start": "09:00"
+  }
+ },
+ {
+  "code": "BUSI3032",
+  "title": "Advanced Finance",
+  "department": "Business",
+  "credits": 1,
+  "schedule": {
+   "days": "TTh",
+   "start": "18:00"
+  },
+  "prerequisites": [
+   "BUSI3001",
+   "BUSI3019"
+  ]
+ },
+ {
+  "code": "MATH3033",
+  "title": "Introduction to Discrete Math",
+  "department": "Math",
+  "credits": 4,
+  "schedule": {
+   "days": "MWF",
+   "start": "16:00"
+  }
+ },
+ {
+  "code": "MATH3034",
+  "title": "Topics in Calculus",
+  "department": "Math",
+  "credits": 1,
+  "schedule": {
+   "days": "TTh",
+   "start": "13:00"
+  }
+ },
+ {
+  "code": "COMP3035",
+  "title": "Advanced Programming",
+  "department": "CS",
+  "credits": 4,
+  "schedule": {
+   "days": "MWF",
+   "start": "08:00"
+  },
+  "prerequisites": [
+   "COMP3031",
+   "COMP3025"
+  ],
+  "lab_fee": 60.0
+ },
+ {
+  "code": "MATH3036",
+  "title": "Introduction to Algebra",
+  "department": "Math",
+  "credits": 4,
+  "schedule": {
+   "days": "TTh",
+   "start": "18:00"
+  },
+  "prerequisites": [
+   "MATH3034",
+   "MATH3009"
+  ]
+ },
+ {
+  "code": "MATH3037",
+  "title": "Advanced Geometry",
+  "department": "Math",
+  "credits": 2,
+  "schedule": {
+   "days": "TTh",
+   "start": "16:00"
+  },
+  "lab_fee": 75.0
+ },
+ {
+  "code": "MATH3038",
+  "title": "Introduction to Discrete Math",
+  "department": "Math",
+  "credits": 3,
+  "schedule": {
+   "days": "TTh",
+   "start": "07:00"
+  },
+  "prerequisites": [
+   "MATH3009"
+  ]
+ },
+ {
+  "code": "BIOL3039",
+  "title": "Advanced Botany",
+  "department": "Biology",
+  "credits": 4,
+  "schedule": {
+   "days": "MWF",
+   "start": "15:00"
+  }
+ },
+ {
+  "code": "BUSI3040",
+  "title": "Introduction to Accounting",
+  "department": "Business",
+  "credits": 2,
+  "schedule": {
+   "days": "TTh",
+   "start": "18:00"
+  }
+ },
+ {
+  "code": "BIOL3041",
+  "title": "Advanced Ecology",
+  "department": "Biology",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "11:00"
+  },
+  "prerequisites": [
+   "BIOL3028",
+   "BIOL3008"
+  ]
+ },
+ {
+  "code": "MATH3042",
+  "title": "Advanced Geometry",
+  "department": "Math",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "18:00"
+  }
+ },
+ {
+  "code": "MATH3043",
+  "title": "Introduction to Geometry",
+  "department": "Math",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "11:00"
+  },
+  "prerequisites": [
+   "MATH3005"
+  ]
+ },
+ {
+  "code": "BIOL3044",
+  "title": "Advanced Botany",
+  "department": "Biology",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "12:00"
+  },
+  "lab_fee": 25.0
+ },
+ {
+  "code": "COMP3045",
+  "title": "Topics in Data Structures",
+  "department": "CS",
+  "credits": 4,
+  "schedule": {
+   "days": "TTh",
+   "start": "13:00"
+  },
+  "prerequisites": [
+   "COMP3006",
+   "COMP3000"
+  ],
+  "lab_fee": 40.0
+ },
+ {
+  "code": "COMP3046",
+  "title": "Introduction to Databases",
+  "department": "CS",
+  "credits": 2,
+  "schedule": {
+   "days": "TTh",
+   "start": "14:00"
+  }
+ },
+ {
+  "code": "BUSI3047",
+  "title": "Topics in Economics",
+  "department": "Business",
+  "credits": 4,
+  "schedule": {
+   "days": "TTh",
+   "start": "18:00"
+  }
+ },
+ {
+  "code": "MATH3048",
+  "title": "Topics in Statistics",
+  "department": "Math",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "17:00"
+  },
+  "prerequisites": [
+   "MATH3002"
+  ]
+ },
+ {
+  "code": "BIOL3049",
+  "title": "Topics in Microbiology",
+  "department": "Biology",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "17:00"
+  },
+  "prerequisites": [
+   "BIOL3030",
+   "BIOL3008"
+  ]
+ },
+ {
+  "code": "BUSI3050",
+  "title": "Topics in Accounting",
+  "department": "Business",
+  "credits": 2,
+  "schedule": {
+   "days": "TTh",
+   "start": "17:00"
+  },
+  "prerequisites": [
+   "BUSI3001",
+   "BUSI3040"
+  ]
+ },
+ {
+  "code": "COMP3051",
+  "title": "Topics in Programming",
+  "department": "CS",
+  "credits": 2,
+  "schedule": {
+   "days": "MWF",
+   "start": "07:00"
+  }
+ },
+ {
+  "code": "MATH3052",
+  "title": "Topics in Geometry",
+  "department": "Math",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "14:00"
+  },
+  "prerequisites": [
+   "MATH3022"
+  ]
+ },
+ {
+  "code": "MATH3053",
+  "title": "Topics in Calculus",
+  "department": "Math",
+  "credits": 4,
+  "schedule": {
+   "days": "TTh",
+   "start": "11:00"
+  }
+ },
+ {
+  "code": "MATH3054",
+  "title": "Topics in Geometry",
+  "department": "Math",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "12:00"
+  },
+  "prerequisites": [
+   "MATH3052"
+  ]
+ },
+ {
+  "code": "BUSI3055",
+  "title": "Introduction to Economics",
+  "department": "Business",
+  "credits": 4,
+  "schedule": {
+   "days": "TTh",
+   "start": "16:00"
+  },
+  "prerequisites": [
+   "BUSI3050"
+  ]
+ },
+ {
+  "code": "BIOL3056",
+  "title": "Introduction to Genetics",
+  "department": "Biology",
+  "credits": 2,
+  "schedule": {
+   "days": "TTh",
+   "start": "13:00"
+  },
+  "lab_fee": 25.0
+ },
+ {
+  "code": "COMP3057",
+  "title": "Advanced Data Structures",
+  "department": "CS",
+  "credits": 1,
+  "schedule": {
+   "days": "MWF",
+   "start": "16:00"
+  },
+  "lab_fee": 25.0
+ },
+ {
+  "code": "BUSI3058",
+  "title": "Introduction to Accounting",
+  "department": "Business",
+  "credits": 2,
+  "schedule": {
+   "days": "TTh",
+   "start": "07:00"
+  },
+  "prerequisites": [
+   "BUSI3001"
+  ]
+ },
+ {
+  "code": "COMP3059",
+  "title": "Advanced AI",
+  "department": "CS",
+  "credits": 3,
+  "schedule": {
+   "days": "MWF",
+   "start": "15:00"
+  },
+  "lab_fee": 40.0
+ }
+]

@@ -1,0 +1,123 @@
+---
+title: "Databases & SQL: Querying Where the Data Lives"
+unit: "II"
+lesson: "02"
+type: concept
+tags: [databases, sql, duckdb, olap, oltp]
+difficulty: introductory
+duration: "50 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Explain** what a relational table is and read a basic `SELECT` statement. *(Understand)*
+- **Write** a `SELECT … WHERE … GROUP BY … ORDER BY` query to answer a question. *(Apply)*
+- **Decide** when a columnar/OLAP engine like DuckDB beats loading everything into pandas. *(Analyze)*
+
+> **Where this sits:** after **L01 — What Is Data Science?** · before **L03 — Storage
+> Formats: CSV vs Parquet** (first lesson of Unit II).
+
+> **Hands-on:** [Lab — Querying Files with DuckDB](l02_lab_querying_duckdb.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u02_big_data/l02_lab_querying_duckdb.ipynb)
+
+## Why This Matters
+
+In L01 we framed a question and said *"acquire the data."* Most useful data already lives
+in a **database** — and you don't move it to analyze it; you **ask it questions** in SQL,
+the language that has run the data world for 50 years.
+
+::: {.callout-tip title="Analogy"}
+A database is a well-organized warehouse and SQL is the order form. You don't wander the
+aisles (loop over rows) — you hand in a form describing *what* you want, and the warehouse
+staff (the query engine) figure out the fastest way to fetch it.
+:::
+
+## Intuition: Tables and SELECT
+
+A **relational table** is rows (records) × columns (fields) with names and types — a
+spreadsheet with rules. You retrieve from it with `SELECT`:
+
+```sql
+SELECT department, AVG(gpa) AS avg_gpa   -- which columns (and computed values)
+FROM students                            -- which table
+WHERE enrolled = TRUE                    -- keep only some rows
+GROUP BY department                      -- one output row per department
+ORDER BY avg_gpa DESC;                   -- sort the result
+```
+
+Read it in **execution order**, not written order: `FROM -> WHERE -> GROUP BY -> SELECT ->
+ORDER BY`. You describe the *result you want*; the engine decides *how* to compute it.
+That declarative style is why the same query runs on a laptop or a cluster unchanged.
+
+## OLTP vs OLAP — Two Jobs, Two Layouts
+
+| | **OLTP** (transactional) | **OLAP** (analytical) |
+|---|---|---|
+| Job | run the business: insert/update one row at a time | understand the business: scan millions of rows, few columns |
+| Example | "record this enrollment" | "average GPA by department" |
+| Engine | PostgreSQL, MySQL, SQLite | **DuckDB**, BigQuery, Snowflake |
+| Storage | **row**-oriented | **column**-oriented |
+
+Why the storage layout matters for *our* work (analysis = OLAP):
+
+```{mermaid}
+flowchart TB
+    subgraph Row["Row store"]
+      r1["(1, Ana, CS, 3.6)"] --- r2["(2, Leo, Math, 2.9)"]
+    end
+    subgraph Col["Column store"]
+      c1["gpa: 3.6, 2.9, 3.1, …"] --- c2["dept: CS, Math, CS, …"]
+    end
+    Row ~~~ Col
+```
+
+*Top: a row store keeps each record's fields together. Bottom: a column store keeps each
+column's values together.*
+
+To average one column over a million rows, a **column store reads just that column** off
+disk (and compresses it well, because neighbors are similar). A row store must touch every
+row. That is the whole reason analytical queries are dramatically faster on columnar
+engines — you'll *measure* this later in Unit II.
+
+## Why DuckDB
+
+**DuckDB is an in-process OLAP database** — "SQLite for analytics." No server to install
+(`pip install duckdb`), and it queries data files and pandas DataFrames **directly**,
+including files bigger than RAM. It's the ideal teaching and analysis engine: real SQL,
+columnar speed, zero setup.
+
+## When to Use SQL/DuckDB — and When NOT To
+
+- **Use it when:** the data is in a database or a data file; you're
+  aggregating/filtering/joining; the data is large; you want a query that's readable and
+  portable.
+- **Reach for pandas instead when:** you need row-wise Python logic, plotting, feature
+  engineering, or reshaping that's awkward in SQL. (They compose — DuckDB can query a
+  pandas DataFrame and hand the result back as one.)
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- The clause order `FROM -> WHERE -> GROUP BY -> SELECT -> ORDER BY` <!-- obj 1 · Understand · Moodle MC -->
+- **OLTP vs OLAP** and which storage layout each uses <!-- obj 3 · Analyze · Moodle MC -->
+- Writing a `GROUP BY` aggregation <!-- obj 2 · Apply · CodeRunner -->
+
+## FAQ / Industry Reality
+
+**"If I know pandas, why learn SQL?"** — Because the data usually arrives *in* a database,
+and pushing the filter/aggregation to the engine (instead of loading everything into
+Python) is faster, uses less memory, and is what every data team actually does. SQL is
+also far more portable across jobs and tools than any one library's API.
+
+**"Is DuckDB a 'real' database?"** — Yes, for analytics. It's not for high-concurrency
+transactional writes (that's PostgreSQL's job) — it's for *reading and crunching*, which
+is what analysis is.
+
+## Where to Go Deeper
+
+- **Official docs:** [DuckDB — SQL Introduction](https://duckdb.org/docs/stable/sql/introduction) and [Data Import](https://duckdb.org/docs/stable/data/overview) — excellent, example-driven.
+- **Interactive reference:** [Mode SQL Tutorial — GROUP BY](https://mode.com/sql-tutorial/sql-group-by) and aggregate functions (free).
+- **Concept article:** [Why DuckDB](https://duckdb.org/why_duckdb) — the case for in-process, columnar analytics.

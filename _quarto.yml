@@ -1,0 +1,46 @@
+project:
+  type: website
+  render:                 # .ipynb excluded: notebooks are artifacts, .md is the page source
+    - "*.qmd"
+    - "**/*.qmd"
+    - "**/*.md"
+
+website:
+  title: "CDAT 4001 — Data Science"
+  site-url: https://devomh.github.io/cdat4001-2026/
+  page-navigation: true
+  sidebar:
+    style: docked
+    search: true
+    contents:
+      - index.qmd
+      # Modules are added here as lessons are published, grouped by unit:
+      - section: "Unit I — Introduction"
+        contents:
+          - u01_introduction/l01_concept_intro_data_science.qmd
+      - section: "Unit II — Big Data"
+        contents:
+          - u02_big_data/l02_concept_databases_sql.qmd
+          - u02_big_data/l02_lab_querying_duckdb.md
+          - u02_big_data/l03_concept_csv_vs_parquet.qmd
+          - u02_big_data/l03_lab_benchmark_formats.md
+          - u02_big_data/l04_concept_json_web_apis.qmd
+          - u02_big_data/l04_lab_air_quality_api.md
+          - u02_big_data/l05_concept_nosql.qmd
+          - u02_big_data/l05_lab_tables_vs_documents.md
+          - u02_big_data/l06_concept_scaling_spark.qmd
+          - u02_big_data/l06_lab_mapreduce_pyspark.md
+
+format:
+  html:
+    theme: cosmo
+    mermaid:
+      theme: neutral      # default theme gives dark subgraph fills (unreadable in light mode)
+    toc: true
+    toc-depth: 3
+    code-copy: true
+    code-overflow: wrap
+    html-math-method: katex
+
+execute:
+  freeze: auto

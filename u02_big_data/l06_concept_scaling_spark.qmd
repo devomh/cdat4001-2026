@@ -1,0 +1,162 @@
+---
+title: "Computing at Scale: MapReduce & Spark"
+unit: "II"
+lesson: "06"
+type: concept
+tags: [big-data, mapreduce, spark, pyspark, distributed, three-vs]
+difficulty: intermediate
+duration: "50 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Identify** the Vs of big data and what breaks when data outgrows one machine. *(Understand)*
+- **Trace** a computation through map, shuffle, and reduce. *(Analyze)*
+- **Use** PySpark in local mode to run a DataFrame aggregation and read its lazy plan. *(Apply)*
+
+> **Where this sits:** after **L05 — NoSQL** · closes Unit II (Big Data).
+
+> **Hands-on:** [Lab — MapReduce by Hand, then PySpark](l06_lab_mapreduce_pyspark.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u02_big_data/l06_lab_mapreduce_pyspark.ipynb)
+
+## Why This Matters
+
+L01's FAQ made a promise: *"Do I need big data tools? No — most questions fit on a
+laptop. We'll see where that line is in Unit II."* This lesson is that line. L03's
+benchmark crunched a million rows in milliseconds on one machine — so what genuinely
+requires more? The answer shaped a whole industry: when one machine isn't enough, you
+**split the work, compute locally, and assemble the answer** — and you should know both
+how that works and when it's overkill.
+
+::: {.callout-tip title="Analogy"}
+A census of Puerto Rico. One option: a single, very fast clerk reads every form on the
+island (scale **up** — a bigger machine). The other: each of the 78 municipalities counts
+its own forms locally (**map**), mails one subtotal per question to the capital
+(**shuffle**), where they're added up (**reduce**) (scale **out** — more machines).
+MapReduce is the 78-clerks idea, formalized.
+:::
+
+## The Vs and the Single-Machine Ceiling
+
+"Big data" classically means data challenging on three axes (the original trio):
+
+| V | The challenge | What breaks on one machine |
+|---|--------------|----------------------------|
+| **Volume** | too much data | doesn't fit on disk or in RAM; one pass takes days |
+| **Velocity** | arriving too fast | ingest can't keep up; analysis is stale before it ends |
+| **Variety** | mixed shapes at once | one schema can't hold tables + JSON + free text (L01's taxonomy, L04-L05 lived it) |
+
+A fourth V is commonly appended — and it's the one this course's syllabus emphasizes:
+**veracity**, quality that varies wildly across sources. At scale it bites hardest of
+all, because cleaning (already most of the work, per L01) multiplies with every source
+you add.
+
+Two honest observations before reaching for a cluster. First, **the ceiling is high**:
+one modern machine with DuckDB handles tens of gigabytes comfortably (L02/L03 were not
+toys). Second, when you do cross the ceiling, *moving* the data becomes the enemy —
+copying 40 TB to a laptop is hours of network time before any analysis. The cure inverts
+the flow: **move the computation to where the data lives**.
+
+## Splitting the Work: HDFS and MapReduce
+
+The storage half is a **distributed file system** (Hadoop's is HDFS): one huge file is
+chopped into blocks, the blocks spread across many machines, each block stored on more
+than one (machines fail; the data must survive). Now the question: how do you compute on
+a file that lives in pieces on fifty machines?
+
+**MapReduce** answers with a discipline of three phases:
+
+```{mermaid}
+flowchart LR
+    F[Input, split in chunks] --> M1[Map worker 1]
+    F --> M2[Map worker 2]
+    F --> M3[Map worker 3]
+    M1 --> S[Shuffle: route pairs by key]
+    M2 --> S
+    M3 --> S
+    S --> R1[Reduce: key group A]
+    S --> R2[Reduce: key group B]
+    R1 --> O[Assembled answer]
+    R2 --> O
+```
+
+Reading the diagram: **map** runs on each chunk *where it is stored* — no data movement,
+full parallelism — turning records into `(key, value)` pairs. **Shuffle** is the only
+phase that moves data: every pair travels to the worker responsible for its key. **Reduce**
+collapses each key's bucket into a result, again in parallel. Your `GROUP BY` from L02
+secretly had this shape all along — map (emit group key), shuffle (gather groups), reduce
+(aggregate) — which is why the lab can write MapReduce in fifteen lines of plain Python
+before touching any framework.
+
+## Spark: MapReduce, Industrialized
+
+Writing raw map/reduce jobs (Hadoop's programming model) proved verbose and slow —
+every intermediate result hit disk. **Apache Spark** kept the paradigm and fixed the
+ergonomics:
+
+| | Hadoop MapReduce | Spark |
+|---|------------------|-------|
+| You write | map and reduce functions, by hand | DataFrame operations (`groupBy`, `agg`) — SQL-shaped, L02 skills transfer |
+| Intermediate data | written to disk between phases | kept in **memory** across steps |
+| Execution | eager, one job at a time | **lazy**: builds a plan, optimizes it, runs on demand |
+| Today | legacy (its filesystem, HDFS, lives on) | the de facto standard for cluster compute |
+
+Two Spark words you'll meet in the lab. The **driver** is your notebook process — it
+holds the plan; **executors** are the workers that hold data partitions and do the
+computing. And **lazy evaluation**: `groupBy(...).agg(...)` returns instantly because
+*nothing has run* — Spark just recorded the plan. Only an **action** (`.show()`,
+`.count()`, a write) triggers execution, which lets Spark optimize the whole pipeline
+first (you'll read one of those optimized plans with `.explain()` — and see it pull the
+L03 trick of reading only the columns the query needs).
+
+## When NOT to Use a Cluster
+
+- **Stay on the laptop when:** the data fits on one machine (rule of thumb: up to tens
+  of GB with DuckDB/pandas), the job runs comfortably overnight, or you're iterating on
+  a sample anyway. Spark's startup and shuffle overhead make it *slower* than DuckDB at
+  laptop scale — clusters buy *capacity*, not free speed.
+- **Scale out when:** the data genuinely exceeds one machine's disk/RAM, a pipeline must
+  finish faster than one machine allows, or the data already lives in a distributed
+  store and moving it out costs more than computing in place.
+- The professional default order: **sample it, then laptop, then one big machine, then
+  cluster** — and most projects never reach the last step.
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- The Vs of big data (volume, velocity, variety; veracity as the added fourth), and which one a described failure exhibits <!-- obj 1 · Understand · Moodle MC -->
+- Order and roles of map / shuffle / reduce (which phase moves data?) <!-- obj 2 · Analyze · Moodle MC -->
+- What lazy evaluation defers, and which calls trigger execution <!-- obj 3 · Apply · Moodle MC -->
+
+## FAQ / Industry Reality
+
+**"Is Hadoop dead, then?"** — The *programming model* (hand-written MapReduce jobs) is
+legacy; the *ideas* won completely. HDFS-style distributed storage underlies modern data
+lakes, and Spark, which replaced it at the compute layer, is itself a MapReduce
+descendant — today usually rented as a managed service (Databricks, AWS EMR, Google
+Dataproc) rather than self-hosted. Learn the paradigm, not the brand.
+
+**"My 50 GB CSV — is that big data?"** — Almost certainly not. Convert it to Parquet
+(L03), point DuckDB at it (L02), and it's an interactive dataset on one machine. "Doesn't
+fit in Excel" is not the bar; "doesn't fit on a machine" is.
+
+## Deep Dive: RDDs vs DataFrames (Optional)
+
+::: {.callout-note collapse="true" title="Click to expand: RDDs vs DataFrames"}
+Spark's original API, the **RDD** (Resilient Distributed Dataset), exposes map and
+reduce directly over arbitrary Python objects — maximum control, no optimizer help. The
+**DataFrame** API you use in the lab describes *what* you want in named-column
+operations, letting Spark's Catalyst optimizer reorder, prune, and fuse the work (the
+`.explain()` plan is its output). The relationship mirrors L02: RDDs are the imperative
+loop, DataFrames the declarative query. Modern Spark code is DataFrames almost
+exclusively; RDDs surface only when structure truly disappears.
+:::
+
+## Where to Go Deeper
+
+- **Official docs:** [Spark — Quick Start](https://spark.apache.org/docs/latest/quick-start.html) — the lab's API surface, one page.
+- **Official docs:** [Spark — Cluster Mode Overview](https://spark.apache.org/docs/latest/cluster-overview.html) — driver and executors, with the diagram.
+- **The classic paper:** [Dean & Ghemawat (2004), *MapReduce: Simplified Data Processing on Large Clusters*](https://research.google/pubs/mapreduce-simplified-data-processing-on-large-clusters/) — readable, and the census analogy is basically its Figure 1.

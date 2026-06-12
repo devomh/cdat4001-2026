@@ -1,0 +1,139 @@
+---
+title: "NoSQL: When Tables Don't Fit"
+unit: "II"
+lesson: "05"
+type: concept
+tags: [nosql, document-store, key-value, schema-on-read, tinydb]
+difficulty: introductory
+duration: "45 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Explain** schema-on-write vs schema-on-read and the main NoSQL store families. *(Understand)*
+- **Query** the same dataset as relational rows and as documents, and contrast the code. *(Apply)*
+- **Justify** choosing SQL or NoSQL for a described workload. *(Evaluate)*
+
+> **Where this sits:** after **L04 — JSON & Web APIs** · before **L06 — Computing at Scale**.
+
+> **Hands-on:** [Lab — Tables vs Documents](l05_lab_tables_vs_documents.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u02_big_data/l05_lab_tables_vs_documents.ipynb)
+
+## Why This Matters
+
+L04 ended with a quiet confession: to analyze the API's nested JSON, we **flattened** it
+— and threw away its shape. Every optional field became a NULL-padded column; every list
+sat awkwardly in a cell. That trade is so common that an entire family of databases
+exists to refuse it: **NoSQL** stores keep the document as-is and query it in place.
+Knowing when that refusal is worth it — and when the relational table you learned in L02
+is still the right call — is a working data scientist's judgment call.
+
+::: {.callout-tip title="Analogy"}
+A relational table is an apartment building: every unit has the same floor plan, so the
+address system is simple and the building is easy to manage at scale. A document store is
+a self-storage facility: each unit holds whatever shape you bring, labeled by key — at
+the price of nobody guaranteeing what's inside any given unit.
+:::
+
+## Schema-on-Write vs Schema-on-Read
+
+The deepest difference is *when structure is enforced*:
+
+| | Schema-on-write (relational, L02) | Schema-on-read (NoSQL) |
+|---|---|---|
+| Structure checked | when data is **stored** — wrong shape is rejected | when data is **used** — your code handles whatever arrives |
+| Ragged data (optional fields, lists) | NULL-padded columns, awkward | natural — each document keeps its own shape |
+| Guarantee to later readers | strong: every row has every column, typed | weak: each document may differ |
+| Schema changes | migrate the table | just start writing the new shape |
+
+Neither is "better" — they move the same work (handling shape) to different places.
+Recall L03's schema lesson: CSV re-infers types on every read while Parquet stores them;
+schema-on-read pushes that same burden onto *every program that reads the data*.
+
+## The NoSQL Families
+
+"NoSQL" is an umbrella, not a single design. The families you'll meet:
+
+| Family | Unit of storage | Canonical tools | Typical use |
+|--------|-----------------|-----------------|-------------|
+| **Document** | a JSON-like document, queried by content | MongoDB; **TinyDB** (the lab's zero-server stand-in) | ragged records: catalogs, profiles, API payloads |
+| **Key-value** | an opaque value behind a key | Redis | caches, sessions: "give me exactly this one thing, fast" |
+| **Wide-column** | sparse rows with per-row columns, spread across many machines | Cassandra | huge write-heavy tables: sensor feeds, message stores |
+| **Graph** | nodes and edges | Neo4j | relationship-first questions — the subject of Unit VII |
+
+Document stores are this lesson's focus: they store L04's JSON *without flattening*.
+Cassandra and Redis are named here so you can place them on the map; we won't run them
+(they're servers — see the FAQ).
+
+## The Shared Task, Both Ways
+
+The lab stores one **course catalog** (60 documents, deliberately ragged: optional
+`prerequisites` lists, sparse `lab_fee`, a nested `schedule`) both ways and asks one
+question — *average credits of courses that charge a lab fee, by department*:
+
+```python
+# Illustrative only (read-only) — the lab runs both for real.
+
+# Approach A: flatten, then declare WHAT you want (SQL, L02 unchanged)
+flat = pd.json_normalize(courses)
+duckdb.sql("""SELECT department, AVG(credits)
+              FROM flat WHERE lab_fee IS NOT NULL
+              GROUP BY department""")
+
+# Approach B: query documents in place, then aggregate yourself (Python)
+Course = Query()
+with_fee = db.search(Course.lab_fee.exists())     # documents, un-flattened
+for c in with_fee:
+    totals[c["department"]].append(c["credits"])  # your own GROUP BY
+```
+
+Same answer, different bargains. SQL needed the flattening step but then *declared* the
+aggregation in one clause (the L02 superpower). The document store skipped flattening —
+`lab_fee.exists()` asks about *shape* directly, where a flat table can only approximate
+the question after NULL-padding (it can no longer tell "field absent" from "field present
+but empty") — but made you hand-roll the aggregation loop. That trade repeats across the
+whole NoSQL world: **flexible shapes in, more query work out.**
+
+## Which to Choose When
+
+- **Relational (SQL)** when: the data is genuinely tabular, many tools/people will query
+  it, aggregations dominate, or you need the schema as a *contract* for later readers.
+- **Document (NoSQL)** when: records are ragged or deeply nested, the shape evolves
+  weekly, you mostly fetch whole records by content, or you're storing API payloads
+  as-received (L04's case).
+- **Mixed is normal:** a common pipeline lands raw JSON in a document store, then flattens
+  the analysis-ready slice into tables — both, each where it's strong.
+
+::: {.callout-warning}
+NoSQL is not a SQL upgrade. Skipping schema design doesn't remove the work — it moves it
+into every program that reads the data, forever. Choose schema-on-read because the *data*
+is ragged, not because schema design feels like effort.
+:::
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Schema-on-write vs schema-on-read, and which family stores what <!-- obj 1 · Understand · Moodle MC -->
+- What flattening ragged documents into a table forces (NULL padding; lists in cells) <!-- obj 2 · Apply · Moodle MC -->
+- Pick SQL or NoSQL for a described workload, and say why <!-- obj 3 · Evaluate · Moodle MC -->
+
+## FAQ / Industry Reality
+
+**"Is SQL dying, then?"** — The opposite: it keeps absorbing its challengers. Document
+databases grew SQL-like query layers, and engines like DuckDB read JSON directly. The
+professional skill isn't picking a side; it's recognizing which shape your data wants —
+most teams run both.
+
+**"What does Cassandra actually store?"** — Sparse, wide rows partitioned across many
+machines by key: each row can have its own columns (schema-on-read), and the partitioning
+is what buys the enormous write throughput. It exists for *scale* — which is exactly
+where L06 picks up.
+
+## Where to Go Deeper
+
+- **Official docs:** [TinyDB — Getting Started](https://tinydb.readthedocs.io/en/latest/getting-started.html) — the lab's whole API in two pages.
+- **Official docs:** [MongoDB — Data Modeling Introduction](https://www.mongodb.com/docs/manual/data-modeling/) — the same document-vs-table reasoning, production scale.
+- **Article:** [Martin Fowler — PolyglotPersistence](https://martinfowler.com/bliki/PolyglotPersistence.html) — why real systems mix stores, in two screens.
