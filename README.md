@@ -9,3 +9,7 @@ course's publishing pipeline.
 Each lesson's concept page on the site links its hands-on lab; the "Open in Colab"
 badge on every concept page opens the corresponding notebook directly from this
 repository.
+
+## License
+
+Course content is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (see `LICENSE`).
