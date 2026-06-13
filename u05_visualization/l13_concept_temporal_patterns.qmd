@@ -1,0 +1,295 @@
+---
+title: "Patterns in Time: Trend, Seasonality, and Noise"
+unit: "V"
+lesson: "13"
+type: concept
+tags: [time-series, resampling, rolling-mean, seasonality, trend, normalization]
+difficulty: introductory
+duration: "50 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Describe** what makes time-series data different — order carries information, timestamps become the index — and **identify** the three components of a series: trend, seasonality, noise. *(Understand)*
+- **Choose** a temporal scale (resampling daily to monthly to annual) appropriate to a question and **justify** the information trade-off. *(Apply / Analyze)*
+- **Identify** trend with rolling means, and seasonality and periodicity with monthly climatologies and lag correlation. *(Apply)*
+- **Apply** normalization — z-scores across units, anomalies against a baseline — to compare series and to separate trend from the seasonal cycle. *(Apply)*
+
+> **Where this sits:** after **L12** mapped patterns in *space* · this lesson is patterns in *time* · next, L14 closes Unit V with patterns across *many variables*.
+
+> **Hands-on:** [Lab — Sixty-Five Years of San Juan Weather](l13_lab_san_juan_climate.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u05_visualization/l13_lab_san_juan_climate.ipynb)
+
+## Why This Matters
+
+On September 20, 2017, the rain gauge at San Juan's Luis Muñoz Marín
+airport recorded 180.6 mm of rain — and then the thermometer went silent
+for two days. Hurricane María is five rows in a table that the station has
+been writing since 1960: one row per day, 23,742 rows, longer than anyone
+in the classroom has been alive.
+
+A table like that answers almost nothing by inspection. Is San Juan
+getting hotter? Is there a rainy season? Was María the worst day? Each of
+those questions is about a *pattern that fluctuates in time*, and each
+pattern lives at a different time scale — single days, the cycle of a
+year, the drift of decades. The temporal toolkit is small — change the
+scale, smooth, group by season, normalize — but with it, one thermometer
+tells sixty-five years of history:
+
+![Line chart of San Juan monthly temperature anomalies from 1960 to 2024. A pale blue jagged line shows monthly departures from each month's normal value, and a thick red 12-month rolling mean snakes through it, starting near minus one degree Celsius in the 1960s and climbing irregularly to plus one and a half degrees by 2024.](assets/l13_anomaly_trend.png)
+
+**Reading the output:** this is where the lab ends up — the seasonal cycle
+subtracted away, the noise smoothed away, and what remains is the long-term
+story: San Juan's months now run about **1.5 C warmer** than they did when
+the station started watching. None of that is visible in the raw table.
+That is what this lesson's tools are for.
+
+## What Is a Time Series?
+
+> **Analogy:** a regular table is a deck of index cards — shuffle it and
+> nothing is lost. A time series is a flip-book: each page barely differs
+> from the last, and the *order is the story*. Shuffle a flip-book and you
+> have confetti.
+
+A **time series** is a sequence of observations where each value is
+attached to a **timestamp** and the *order carries information*: today
+resembles yesterday, Septembers resemble Septembers. In pandas this is a
+Series or DataFrame whose **index holds the timestamps** — which is what
+unlocks date slicing (`.loc["2017-09"]`), resampling, and rolling windows.
+
+The working mental model of this lesson: a series is the sum of three
+components.
+
+| Component | What it is | San Juan example |
+|---|---|---|
+| **Trend** | the slow drift across the whole record | warming of about +1.5 C since the 1960s |
+| **Seasonality** | a wave that repeats at a *fixed, known* period | warm Augusts, cool Januaries — every year |
+| **Noise** | day-to-day jitter left over; includes one-off events | a 180.6 mm hurricane day |
+
+The cleanest way to see the model is to *build* a series — then there is
+no doubt about the truth, because we wrote it down:
+
+```python
+rng = np.random.default_rng(4001)
+months = pd.date_range("2019-01-31", periods=72, freq="ME")
+trend = np.linspace(0, 1.5, 72)                            # slow climb
+season = 1.2 * np.sin(2 * np.pi * (months.month - 4) / 12) # 12-month wave
+noise = rng.normal(0, 0.35, 72)                            # seeded jitter
+observed = pd.Series(25 + trend + season + noise, index=months)
+```
+
+![Four stacked line charts. The top panel, labeled observed equals trend plus season plus noise, shows a wavy series climbing slowly. Below it, three panels show each ingredient alone: a straight rising trend line in red, a clean repeating 12-month sine wave in blue, and structureless gray jitter labeled noise.](assets/l13_components.png)
+
+**Reading the output:** the top panel is what a real dataset hands you;
+the three panels below are what it is *made of*. Real data never comes
+with its components labeled — the rest of this lesson is the toolkit for
+recovering each one. Two vocabulary notes: when a cycle's length is fixed
+by the calendar we call it **seasonality**; when a repeating cycle has to
+be *discovered from the data*, we speak of **periodicity** (and below we
+will discover one without using the calendar at all).
+
+## The Scale You Choose Decides What You See
+
+The first tool is almost embarrassingly simple: change the resolution.
+**Resampling** regroups a series into coarser time bins — days into
+months, months into years — and aggregates each bin to one value:
+
+```python
+temp_m = weather["TMID"].resample("ME").mean()   # monthly mean temperature
+rain_m = weather["PRCP"].resample("ME").sum()    # monthly TOTAL rainfall
+```
+
+The aggregation is a decision, not a default. Temperature is a *level*, so
+a month is summarized by its **mean**; rainfall *accumulates*, so a month
+is its **sum** — average the daily rain instead and a hurricane month full
+of dry days looks unremarkable. Now watch one thermometer at three scales:
+
+![Three stacked line charts of the same San Juan temperature record. The daily panel is a dense solid ribbon of 23,742 points. The monthly-means panel resolves into a clean wave repeating every year. The annual-means panel, drawn in red, shows a slowly climbing line from about 26 degrees to over 28 degrees Celsius.](assets/l13_three_scales.png)
+
+**Reading the output:** same data, three different stories. The daily
+ribbon shows noise and single events; the monthly wave is the seasonal
+cycle; the annual line is the trend. **Each pattern is visible at exactly
+one scale and invisible at the others** — choosing the scale *is* choosing
+the question.
+
+::: {.callout-important title="Coarsening is lossy"}
+Resampling buys clarity by throwing information away — and it does not
+warn you about what it discarded. At the annual scale, Hurricane María
+does not exist: 2017's rain total is unremarkable. If the question is
+about events, stay at (or return to) the fine scale; report which scale
+and which aggregation you chose, because a reader cannot reconstruct
+either from the plot.
+:::
+
+## Finding the Trend
+
+A monthly series still mixes the seasonal wave with the long-term drift.
+The **rolling mean** (moving average) separates them: replace each point
+with the average of a **window** centered on it.
+
+```python
+roll12 = temp_m.rolling(window=12, center=True).mean()
+```
+
+The window size is the dial. Make it exactly one seasonal cycle — 12
+months — and the wave averages to the same value everywhere, vanishing
+from the output; what survives is the drift. The naive instinct is "more
+smoothing is better": a 3-month window leaves the wave half-alive, while a
+20-year window flattens real decade-scale swings into a featureless line.
+The better rule: **match the window to the pattern you want to remove**
+(one full cycle), and say so. In the lab this yields the lesson's headline:
+the 1960s averaged 26.17 C, the last decade 27.65 C — and the warmest year
+in the record is 2024.
+
+## Finding the Seasons
+
+Seasonality repeats on the calendar, so use the calendar against it: pool
+every January from 1960 to 2024, every February, and so on. The twelve
+group means are the **climatology** — the station's "normal year":
+
+```python
+temp_clim = temp_m.groupby(temp_m.index.month).mean()
+```
+
+San Juan's normal year swings just **3.2 C** between January (25.2 C) and
+August (28.4 C) — the tropics have seasons, only quieter — while rain has
+a sharper shape: a dry March, a November peak near 170 mm.
+
+The climatology *assumed* the cycle was 12 months long. **Periodicity** is
+the same idea without the assumption: let the data reveal its own cycle.
+The instrument is one you already own — L08's correlation coefficient,
+computed between the series and a time-shifted copy of itself, the
+**autocorrelation**:
+
+```python
+acf = [temp_m.autocorr(lag) for lag in range(1, 25)]
+```
+
+For San Juan's monthly temperature: **+0.87 at lag 12** (this August looks
+like last August), **-0.60 at lag 6** (August is February's opposite), and
+a second peak at lag 24. That up-down-up signature *is* a 12-month cycle,
+detected without ever mentioning the calendar.
+
+## Making Series Comparable
+
+Units sabotage comparison. Plot monthly rainfall (tens to hundreds of mm)
+against monthly temperature (24 to 30 C) on one axis and the temperature
+flattens into a ribbon — the axis belongs to whichever series has the
+bigger numbers. **Normalization** puts series on a common scale; two moves
+cover this course:
+
+- **z-score** — re-express each value as standard deviations from the
+  series' own mean: $z = (x - \bar{x}) / s$, with L07's mean and standard
+  deviation as the ruler. Both series now swing around 0 in the same
+  units of "how unusual". (The other classic, **min-max** scaling to
+  [0, 1], compresses everything between the observed extremes — fine for
+  bounded gauges, fragile when outliers set the bounds.)
+- **anomaly** — normalize against the *calendar*: subtract from each month
+  its own climatological normal. What remains is "how unusual *for that
+  month*" — the seasonal cycle is gone by construction, and the trend
+  stands alone. This is how climate results are reported, usually against
+  a fixed 30-year baseline (1961-1990 is the WMO classic).
+
+The z-score also works as an extremeness ruler within one series: María's
+September 2017 ranks **z = +3.6** among all months of rain since 1960 —
+enormous, yet not the record (August 2011 reached +4.5).
+
+## Removing Noise
+
+The third component needs less machinery than the first two: **smoothing**
+*is* the rolling mean again, with the window matched to the noise you want
+gone — 7 days to quiet day-to-day jitter, 30 for weather systems, 365 for
+everything but the trend.
+
+::: {.callout-warning title="Noise removal removes events"}
+Smoothing cannot tell jitter from history. San Juan's all-time heat record
+(36.7 C) survives a 7-day average at 35.6, fades to 33.6 at a month, and
+has vanished entirely from the 365-day curve (31.7). The hurricane and the
+heat wave live in exactly the component smoothing deletes. Use the
+simplest smoothing that achieves clarity — and keep the raw series in
+reach.
+:::
+
+## When to Use Which
+
+- **Raw daily resolution** — when events and extremes are the story: the
+  180.6 mm day, the record high. Patterns drown in it; events live in it.
+- **Monthly scale + climatology** — for seasonal questions: when is the
+  rainy season, how big is the swing.
+- **Annual scale, rolling means, anomalies** — for trend questions: is it
+  getting hotter. The anomaly view is the strongest, because it removes
+  the seasonal cycle instead of just averaging over it.
+- **No time plot at all** — when order does not matter for the question.
+  "How hot do San Juan days get?" is a histogram (L07), not a time series.
+
+## Common Pitfalls
+
+- **Reading trend from a short window.** Two warm years is weather, not a
+  trend — the lab's red rolling line wanders for a decade at a time.
+  Climate normals use 30 years for a reason; quote the span your claim
+  rests on.
+- **Wrong aggregation for the variable.** Means for levels (temperature),
+  sums for amounts (rain). `resample("ME").mean()` on rainfall makes
+  hurricane months look ordinary.
+- **Claiming seasonality from under two cycles.** One year of data shows
+  one winter — you cannot tell the wave from a one-off. Two full periods
+  is the floor; more is better.
+- **Comparing raw series across units.** The bigger numbers own the axis
+  and the smaller series flatlines. Normalize first, and name the method.
+- **Smoothing past the events.** Every widening window shaves the
+  extremes; by 365 days the record high is gone. Smoothing is for seeing
+  trend, never for reporting events.
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Given short descriptions of three features of a plotted series (a slow multi-year climb; a wave repeating every 12 months; leftover jitter), match each to trend, seasonality, or noise <!-- obj 1 · Understand · Moodle MC -->
+- An analyst resamples daily rainfall to monthly with `.mean()` and reports the hurricane month looks normal; diagnose the aggregation mistake and name the fix <!-- obj 2 · Apply · Moodle MC -->
+- A monthly series correlates +0.87 with itself at lag 12 and -0.60 at lag 6; pick the correct interpretation <!-- obj 3 · Apply · Moodle MC -->
+- Temperature in C and rainfall in mm must share one comparison; pick the right move (z-score both) and reject the distractors (raw overlay; resample finer; correlation matrix) <!-- obj 4 · Apply · Moodle MC -->
+
+## FAQ / Industry Reality
+
+**"Is +1.5 C at one airport proof of global warming?"** — Careful. One
+station is one thermometer: instruments get replaced, the airport grew
+around the sensor (cities run warm), and siting changes leave fingerprints.
+Climate science rests on *networks* of stations, cross-checked and
+homogenized, and reports anomalies against fixed baselines. This station's
+trend is consistent with the regional picture — but the honest claim from
+this lab is about San Juan's record, not the planet.
+
+**"Is this forecasting?"** — No, and the difference matters
+professionally. Everything in this lesson *describes the past*: trend,
+season, and noise are read out of data that already happened. Forecasting
+models (ARIMA, exponential smoothing, Prophet) build on exactly these
+components but add machinery for projecting them forward with uncertainty
+— later courses' territory. Describe before you predict.
+
+**"Why not just smooth everything and show the clean line?"** — Because
+the clean line is a claim: "the wiggles I deleted were noise." Sometimes
+they were a hurricane. Professionals show the raw series *behind* the
+smoothed one (as the lab's figures do), report the window, and pick the
+mildest smoothing that makes the pattern visible.
+
+## Cheat-sheet
+
+| Task | Call |
+|---|---|
+| Make timestamps the index | `pd.read_csv(..., parse_dates=["DATE"]).set_index("DATE")` |
+| Slice by date | `s.loc["2017-09"]` · `s.loc["2015":"2024"]` |
+| Coarsen the scale | `s.resample("ME").mean()` (levels) · `.sum()` (amounts) |
+| Fill gaps, time-aware | `s.interpolate(method="time")` |
+| Trend (cancel the seasons) | `s.rolling(12, center=True).mean()` |
+| The normal year | `s.groupby(s.index.month).mean()` |
+| Detect a period | `s.autocorr(lag)` across lags |
+| Compare across units | z-score: `(s - s.mean()) / s.std()` |
+| De-seasonalize | `s - clim[s.index.month].values` |
+
+## Where to Go Deeper
+
+- **Official docs:** [pandas — Time series / date functionality](https://pandas.pydata.org/docs/user_guide/timeseries.html) — resampling, rolling windows, and date slicing, with every frequency code this lesson used.
+- **The data source:** [NOAA NCEI — Global Historical Climatology Network Daily](https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily) — what the station network measures and how the archive is quality-controlled.
+- **The classic:** E. Tufte, *The Visual Display of Quantitative Information* — the principles behind why the anomaly plot persuades and the raw ribbon does not (course bibliography).

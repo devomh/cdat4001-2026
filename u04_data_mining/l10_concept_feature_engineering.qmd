@@ -1,0 +1,280 @@
+---
+title: "From Raw Data to Features: Turning Text into Numbers"
+unit: "IV"
+lesson: "10"
+type: concept
+tags: [feature-engineering, text, bag-of-words, tfidf, unstructured-data]
+difficulty: introductory
+duration: "50 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Explain** what a feature is and why analysis needs a numeric feature matrix. *(Understand)*
+- **Engineer** handcrafted features from raw text and **show** they separate classes using Unit III's EDA tools. *(Apply)*
+- **Convert** a text corpus into a document-term matrix and **interpret** its shape, sparsity, and top terms. *(Apply)*
+- **Compare** raw counts against TF-IDF weighting and **decide** which representation fits a task. *(Analyze)*
+
+> **Where this sits:** after **L09 — the EDA Mini-Project** closed Unit III · opens Unit IV (extracting information from data) · next, L11 asks *which* features matter (feature selection).
+
+> **Hands-on:** [Lab — Engineering Features from 5,574 Text Messages](l10_lab_text_features_spam.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u04_data_mining/l10_lab_text_features_spam.ipynb)
+
+## Why This Matters
+
+Your phone reads every text message you receive and decides, in milliseconds, whether
+to show it or bury it in a spam folder. But here is the thing: **a computer cannot
+read**. "WINNER!! Claim your FREE prize, text 87121" is, to the machine, just a string
+of bytes. Before any analysis can happen, someone has to decide *what to measure*
+about a message. Its length? How many digits it contains? Whether the word "free"
+appears?
+
+Each measured quantity is a **feature**, and inventing good ones — **feature
+engineering** — is where data science earns its keep. A widely quoted line attributed
+to the machine-learning researcher Andrew Ng puts it bluntly: *"Applied machine
+learning is basically feature engineering."*
+
+Units I, II, and III taught you to store data, fetch it, and explore it. Unit IV is about
+*extracting information* from it — and that starts by defining the variables you will
+extract. This lesson takes the hardest case first: raw, unstructured text.
+
+## What Is a Feature?
+
+> **Analogy:** a doctor cannot put "the patient" into a formula. She measures things
+> *about* the patient — temperature, blood pressure, heart rate — and works with those.
+> Features are the measurements; the patient is the raw data.
+
+A **feature** is a measurable property of an observation, expressed as a number (or
+something convertible to one). Arrange them in a table — one row per observation, one
+column per feature — and you have a **feature matrix**, conventionally called `X`:
+
+| | length | digit_count | contains "free" |
+|---|---|---|---|
+| message 1 | 155 | 25 | 1 |
+| message 2 | 29 | 0 | 0 |
+| message 3 | 61 | 2 | 0 |
+
+This should look familiar: it is exactly the tidy-table shape you used through Unit
+III, with one new demand — **every column must end up numeric**. L09's variable-type
+taxonomy still governs what each column *means* (continuous, discrete, ordinal,
+nominal), but analysis algorithms consume numbers, so every raw input — a category
+name, a date, a sentence — needs a defined path into the matrix.
+
+For structured data, that path is usually short:
+
+- **Derived features:** combine existing columns into a more informative one —
+  `YearSold - YearBuilt` becomes `PropertyAge`; weight over height squared becomes BMI.
+- **One-hot encoding** for nominal categories: one new 0/1 column per category value.
+
+| HouseStyle | | style_1Story | style_2Story | style_SLvl |
+|---|---|---|---|---|
+| 2Story | becomes | 0 | 1 | 0 |
+| 1Story | | 1 | 0 | 0 |
+| SLvl | | 0 | 0 | 1 |
+
+::: {.callout-warning title="When one-hot explodes"}
+One column per category value is fine for `HouseStyle` (8 values) and disastrous for
+`Neighborhood`-like columns with hundreds or thousands of values (user IDs, product
+codes): the matrix gains thousands of nearly-empty columns. High-cardinality
+categoricals need other strategies — grouping rare values into "other" is the simplest.
+:::
+
+For **unstructured** data — text, images, audio — there is no column to derive from.
+You must invent the columns. The rest of this lesson is the text version of that
+invention, in three escalating moves: handcrafted features, the bag of words, then
+TF-IDF weighting.
+
+## Move 1: Handcrafted Features
+
+The simplest features are single numbers you can compute from the raw text with one
+line of code: its length, how many digits it contains, how many exclamation marks, how
+many capital letters. No linguistics, no vocabulary — just counting.
+
+It feels too crude to work. Look at what it does on 5,574 real SMS messages, 747 of
+them spam:
+
+![Two-panel figure. Left: overlapping density histograms of message length for ham (blue) and spam (red); ham piles up below 75 characters while spam forms a tall narrow peak around 150 characters. Right: box plots of digits per message; the ham box is flat at zero while the spam box spans roughly 10 to 22 digits with a median of 16.](assets/l10_feature_separation.png)
+
+**Reading the output:** ham messages are short and nearly digit-free — the median ham
+message contains *zero* digits. Spam averages **15.8 digits** per message (phone
+numbers, shortcodes, prices) versus **0.31** for ham — a fifty-fold gap from a feature
+that took one line to compute. The length panel tells its own story: spam piles up
+just under 160 characters, the classic SMS size limit — promotional messages are
+composed to fill the space. Two trivial features, and the classes are already nearly
+separable.
+
+That is the core lesson of feature engineering: **domain insight beats machinery**.
+Knowing that spam carries phone numbers is worth more than any amount of computation
+applied blindly.
+
+## Move 2: The Bag of Words
+
+Handcrafted counts ignore what the message *says*. To capture content, the standard
+first move is brutally simple:
+
+1. **Tokenize** — split each text into words ("tokens").
+2. Build the **vocabulary** — the set of all tokens across the whole collection.
+3. Count — one column per vocabulary word, one row per document; cell = how many
+   times that word appears in that document.
+
+The result is the **document-term matrix**, and the representation is called **bag of
+words**: word order is thrown away ("free prize" and "prize free" look identical),
+only counts remain. Here it is, computed for real on a three-message corpus:
+
+```python
+from sklearn.feature_extraction.text import CountVectorizer
+
+corpus = [
+    "win a free prize now",
+    "are you free for lunch",
+    "lunch now or never",
+]
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(corpus)
+```
+
+| | are | for | free | lunch | never | now | or | prize | win | you |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **msg 1** | 0 | 0 | 1 | 0 | 0 | 1 | 0 | 1 | 1 | 0 |
+| **msg 2** | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
+| **msg 3** | 0 | 0 | 0 | 1 | 1 | 1 | 1 | 0 | 0 | 0 |
+
+**Reading the output:** each row is now a feature vector — msg 1 *is* the numbers
+`[0, 0, 1, 0, 0, 1, 0, 1, 1, 0]` as far as any algorithm is concerned. Two details
+worth noticing: the single-letter word "a" vanished (scikit-learn's default tokenizer
+drops one-character tokens), and the matrix is mostly zeros even for three tiny
+messages.
+
+Two practical refinements come with the move:
+
+- **Stop words.** Words like "the", "to", "you" appear everywhere and carry little
+  signal; passing `stop_words="english"` drops them. The lab shows what happens when
+  you don't: the most frequent spam terms become "to", "call", "you", "your" — noise
+  that buries "free" and "prize".
+- **Sparsity.** Scale the toy example up and zeros take over: a real 5,574-message
+  corpus with a 2,000-word vocabulary gives a matrix of 11 million cells of which
+  **0.31% are non-zero**. Libraries exploit this with a **sparse matrix** — a format
+  that stores only the non-zero entries and their positions, turning an 11-million-cell
+  table into a few tens of thousands of stored numbers.
+
+## Move 3: TF-IDF — Weighting the Counts
+
+Raw counts have a bias: they reward words for being common, but the words that
+*identify* a document are the ones common **in it** and rare **everywhere else**. In
+our toy corpus, "free" appears in two of three messages — knowing a message contains
+"free" narrows things down less than knowing it contains "prize".
+
+**TF-IDF** (term frequency — inverse document frequency) rescales each count by how
+rare the word is across the collection:
+
+| Symbol | Meaning |
+|--------|---------|
+| $t$, $d$ | a term, a document |
+| $\mathrm{tf}(t,d)$ | how often $t$ occurs in $d$ (the raw count) |
+| $N$ | number of documents in the collection |
+| $\mathrm{df}(t)$ | number of documents containing $t$ |
+
+$$
+\mathrm{tfidf}(t,d) = \mathrm{tf}(t,d) \cdot \log\frac{N}{\mathrm{df}(t)}
+$$
+
+The logarithm's job is the intuition: a word in *every* document gets
+$\log(N/N) = \log 1 = 0$ — no weight at all — while a word in one document out of
+many gets the largest boost. Run it on the same toy corpus:
+
+| | are | for | free | lunch | never | now | or | prize | win | you |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **msg 1** | 0.00 | 0.00 | **0.43** | 0.00 | 0.00 | 0.43 | 0.00 | **0.56** | 0.56 | 0.00 |
+| **msg 2** | 0.49 | 0.49 | 0.37 | 0.37 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.49 |
+| **msg 3** | 0.00 | 0.00 | 0.00 | 0.43 | 0.56 | 0.43 | 0.56 | 0.00 | 0.00 | 0.00 |
+
+**Reading the output:** in msg 1, the counts were a flat `1` for every present word —
+but TF-IDF gives "prize" and "win" (which appear *only* in msg 1) a weight of 0.56,
+while "free" (shared with msg 2) is demoted to 0.43. The weighting automatically
+surfaces what makes each document distinctive. On the real corpus the lab shows the
+same effect: TF-IDF promotes the shortcode "87121" — practically a spam fingerprint —
+over generic words the counts ranked higher.
+
+::: {.callout-note collapse="true" title="Deep Dive: what scikit-learn actually computes (optional)"}
+`TfidfVectorizer` uses a *smoothed* variant of the formula above:
+$\mathrm{idf}(t) = \log\frac{1+N}{1+\mathrm{df}(t)} + 1$ — the added ones prevent
+division by zero for unseen terms and keep words that appear in every document from
+being zeroed out entirely. Each document's vector is then normalized to length 1
+(L2 norm), which is why the toy values are decimals below 1 even for count-1 words,
+and why a word's weight in a message depends on what *else* that message contains.
+The intuition — common everywhere means down-weighted — is unchanged.
+:::
+
+## When to Use Which
+
+- **Handcrafted features** — when domain insight suggests a measurable signal
+  (lengths, counts, ratios, flags). Cheap, interpretable, and they capture things no
+  word count sees (ALL-CAPS SHOUTING, message length). Build them *first*.
+- **Raw counts (bag of words)** — when the presence and frequency of terms is itself
+  the signal, and the documents are short and comparable (SMS, tweets, titles).
+- **TF-IDF** — when common-everywhere words would otherwise dominate: longer
+  documents, larger collections, search and ranking problems. The default choice for
+  document similarity.
+- **Avoid all three** when word *order* or meaning matters more than word *choice*
+  ("not good" versus "good") — sequence-aware representations exist beyond this
+  course's scope.
+
+## Common Pitfalls
+
+- **Vectorizing before looking at the text.** Raw corpora are dirty. The lab's corpus
+  contains leftover HTML escapes (`&gt;`, `&lt;`) that tokenize into the junk terms
+  `gt` and `lt` — which then rank among the most frequent "words" in ham messages.
+  Always inspect the top tokens; if they are not words, your cleaning has a gap.
+- **A vocabulary is frozen at fit time.** Words not in the corpus you fit on simply do
+  not exist as columns — a new message about "bitcoin" contributes nothing if the
+  vocabulary predates the word. This **out-of-vocabulary** problem is why vectorizers
+  are refit as corpora evolve.
+- **Throwing away word order without noticing.** "no prize for you" and "prize for
+  you, no?" have identical bags of words. For spam filtering that is usually fine;
+  for sentiment ("not good") it can be fatal. Know what the representation discards.
+- **Engineering features that encode the answer.** A feature like "is this message in
+  the spam folder" predicts spam perfectly and teaches nothing — it *is* the label in
+  disguise. Features must be computable for data whose answer you do not yet know.
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Given a raw-data scenario, pick which quantity is a legitimate feature (and which leaks the label) <!-- obj 1 · Understand · Moodle MC -->
+- Given two example messages from different classes, pick the one-line handcrafted feature that would separate them <!-- obj 2 · Apply · Moodle MC -->
+- Read a small document-term matrix: which message contains which words; why most cells are zero <!-- obj 3 · Apply · Moodle MC -->
+- Counts rank word A on top, TF-IDF ranks word B: what does that say about A and B across the corpus? <!-- obj 4 · Analyze · Moodle MC -->
+
+## FAQ / Industry Reality
+
+**"Why not just keep the text as text?"** — Because nothing downstream consumes text.
+Every statistic from Unit III (means, medians, correlations) and every algorithm in
+the rest of this course operates on numbers. The representation you choose *is* the
+analysis's view of reality — choose it consciously.
+
+**"Don't modern AI language models make this obsolete?"** — They automate it: large
+language models *learn* their text representations instead of being handed engineered
+ones. But the professional reality is that most data work is tabular, small, and
+explainable-on-demand, where engineered features still dominate — and even cutting-edge
+pipelines begin with someone deciding what raw signal to measure. The judgment this
+lesson teaches does not expire with the tooling.
+
+## Cheat-sheet
+
+| Raw situation | Feature move | Call |
+|---|---|---|
+| Two columns imply a better one | derive it (difference, ratio) | plain pandas |
+| Nominal category, few values | one-hot encode | `pd.get_dummies` |
+| Nominal category, hundreds of values | group rare values, then encode | value_counts + mapping |
+| Text, "does it contain X" signals | handcrafted counts and flags | `str.len`, `str.count` |
+| Text, word choice is the signal | bag of words | `CountVectorizer` |
+| Text, distinctive words matter | TF-IDF weighting | `TfidfVectorizer` |
+| Word order or meaning is the signal | beyond this course | (sequence models) |
+
+## Where to Go Deeper
+
+- **Official docs:** [scikit-learn — Text feature extraction](https://scikit-learn.org/stable/modules/feature_extraction.html#text-feature-extraction) — the CountVectorizer/TfidfVectorizer guide this lesson is built on.
+- **Book chapter:** [Python Data Science Handbook — Feature Engineering](https://jakevdp.github.io/PythonDataScienceHandbook/05.04-feature-engineering.html) (VanderPlas) — one-hot, text, and derived features in a few pages.
+- **The dataset's paper:** Almeida, T. A., Gomez Hidalgo, J. M., & Yamakami, A. (2011). "Contributions to the Study of SMS Spam Filtering: New Collection and Results", *ACM DocEng 2011* — where the lab's 5,574 messages come from.

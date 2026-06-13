@@ -30,6 +30,27 @@ website:
           - u02_big_data/l05_lab_tables_vs_documents.md
           - u02_big_data/l06_concept_scaling_spark.qmd
           - u02_big_data/l06_lab_mapreduce_pyspark.md
+      - section: "Unit III — Exploratory Data Analysis"
+        contents:
+          - u03_eda/l07_concept_univariate_eda.qmd
+          - u03_eda/l07_lab_univariate_eda.md
+          - u03_eda/l08_concept_bivariate_correlation.qmd
+          - u03_eda/l08_lab_bivariate_correlation.md
+          - u03_eda/l09_lab_eda_mini_project.md
+      - section: "Unit IV — Data Mining"
+        contents:
+          - u04_data_mining/l10_concept_feature_engineering.qmd
+          - u04_data_mining/l10_lab_text_features_spam.md
+          - u04_data_mining/l11_concept_feature_selection.qmd
+          - u04_data_mining/l11_lab_feature_selection_spam.md
+      - section: "Unit V — Visualization"
+        contents:
+          - u05_visualization/l12_concept_spatial_geopandas.qmd
+          - u05_visualization/l12_lab_mapping_earthquakes.md
+          - u05_visualization/l13_concept_temporal_patterns.qmd
+          - u05_visualization/l13_lab_san_juan_climate.md
+          - u05_visualization/l14_concept_many_variables_pca.qmd
+          - u05_visualization/l14_lab_penguins_pca.md
 
 format:
   html:

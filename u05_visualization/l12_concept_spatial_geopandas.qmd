@@ -1,0 +1,258 @@
+---
+title: "Mapping Puerto Rico: Spatial Data with GeoPandas"
+unit: "V"
+lesson: "12"
+type: concept
+tags: [geopandas, spatial-data, crs, choropleth, maps]
+difficulty: introductory
+duration: "50 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Describe** how vector geospatial data extends the tidy table — a geometry column holding points, lines, or polygons — and **identify** the common file formats. *(Understand)*
+- **Explain** what a coordinate reference system (CRS) is and **demonstrate** why measuring area or distance requires a projected CRS. *(Understand / Apply)*
+- **Build** a choropleth map of a per-region variable and **justify** when counts must be normalized. *(Apply / Analyze)*
+- **Combine** two spatial layers — points over polygons, then a spatial join — to answer a "where did it happen" question. *(Apply)*
+
+> **Where this sits:** after **L11** closed Unit IV (which features carry information) · opens Unit V (showing patterns — visualization) · next, L13 turns to patterns in *time*.
+
+> **Hands-on:** [Lab — Mapping the 2020 Earthquake Sequence](l12_lab_mapping_earthquakes.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u05_visualization/l12_lab_mapping_earthquakes.ipynb)
+
+## Why This Matters
+
+At 4:24 a.m. on January 7, 2020, a magnitude-6.4 earthquake struck off Puerto
+Rico's southwest coast. If you were on the island, you remember it. In the
+weeks around it, hundreds of aftershocks rattled the south — and every one of
+them is a row in a public catalog: a latitude, a longitude, a magnitude, a
+timestamp.
+
+A list of 250 coordinate pairs answers nothing. *Where* did the sequence
+concentrate? Which municipios shook again and again? How far was your town
+from the mainshock? These are spatial questions, and the analyst's move is
+the same one this whole course has practiced — get the data into a table and
+interrogate it — plus one new ingredient: the table has to know where on
+Earth each row *is*. That is what spatial data adds, and **GeoPandas** is the
+tool that makes it feel like the pandas you already know.
+
+![Map of Puerto Rico's municipios in light gray with 250 earthquake epicenters plotted as dots colored and sized by magnitude. The dots cluster densely just off the southwest coast, with a red circle marking the magnitude 6.4 mainshock near the coastline south of Guayanilla.](assets/l12_quake_overlay.png)
+
+**Reading the output:** this is where the lab ends up — two public datasets,
+one picture, and the story is immediate: the sequence was not an island-wide
+event but a tight cluster off the southwest coast, with the mainshock (red
+circle) just offshore. No table of 250 rows communicates that in under a
+second. That is what maps are for.
+
+## What Is Spatial Data?
+
+> **Analogy:** a regular DataFrame is a spreadsheet; a GeoDataFrame is a
+> spreadsheet stapled to a map. Every row still holds ordinary columns — a
+> name, a count, a magnitude — but one special column holds the row's
+> *shape on the Earth*.
+
+**Vector** spatial data represents things on a map with three geometric
+types:
+
+| Geometry | Represents | Example in this lesson |
+|---|---|---|
+| `Point` | a single location | an earthquake epicenter |
+| `LineString` | a connected path | a road, a coastline segment |
+| `Polygon` | an enclosed area | a municipio's boundary |
+
+GeoPandas stores them in a **GeoDataFrame**: a pandas DataFrame with one
+**geometry column** carrying these shapes, plus everything pandas already
+does (filtering, grouping, merging) and a family of spatial verbs — area,
+distance, centroid, "is this point inside that polygon?".
+
+```python
+from shapely.geometry import Point, LineString, Polygon
+import geopandas as gpd
+
+gdf = gpd.GeoDataFrame({
+    "name": ["campus", "route", "plaza"],
+    "geometry": [Point(-65.83, 18.15),
+                 LineString([(-65.83, 18.15), (-65.80, 18.12)]),
+                 Polygon([(-65.84, 18.14), (-65.82, 18.14), (-65.83, 18.16)])],
+}, crs="EPSG:4326")
+```
+
+Two file formats cover most of what you will meet:
+
+- **Shapefile** — the GIS classic, actually a *bundle* of files usually
+  shipped as a `.zip` (the Census distributes boundaries this way;
+  `gpd.read_file` reads the zip directly).
+- **GeoJSON** — exactly the JSON you parsed in L04, with a standardized
+  `geometry` field per feature (the USGS earthquake API speaks it).
+
+## The Coordinate Problem
+
+Here is the conceptual heart of the lesson. A pair of numbers like
+`(-66.81, 17.96)` means nothing until you say *what grid it lives on*. That
+declaration is the **coordinate reference system (CRS)**, and every
+GeoDataFrame carries one. Two families matter:
+
+- **Geographic CRS** — positions as **degrees** of longitude and latitude on
+  the globe (EPSG:4326 is the GPS standard). Ideal for *storing and
+  exchanging* data: universal, unambiguous.
+- **Projected CRS** — the curved Earth flattened onto a plane, positions in
+  **meters** (or feet). Every region has well-fitting ones; for Puerto Rico,
+  **EPSG:32161** (the Puerto Rico State Plane system). Required for
+  *measuring*: areas, distances, buffers.
+
+Why required? Degrees are not a unit of length — a degree of longitude spans
+about 111 km at the equator and 0 km at the poles. Ask for an area while the
+data is in degrees and you get arithmetic on a meaningless unit. The lab
+demonstrates this brutally: summing the "areas" of all 78 municipios in the
+shipped CRS returns **0.7626** — Puerto Rico is apparently three quarters of
+a "square degree", a number with no physical meaning. GeoPandas even prints a
+warning telling you so. One line fixes it:
+
+```python
+municipios = municipios.to_crs(epsg=32161)   # degrees -> meters
+municipios.geometry.area / 1e6               # now a real quantity: km2
+```
+
+— and the same sum becomes **8,928 km2**, the right answer.
+
+::: {.callout-important title="Measure in meters, exchange in degrees"}
+The working rule: data *arrives* in a geographic CRS (degrees) and that is
+fine for plotting and sharing. The moment you compute an **area, distance,
+or buffer**, reproject with `to_crs()` to a projected CRS suited to your
+region — for Puerto Rico, EPSG:32161. And before combining two layers,
+make sure they share a CRS: shapes from different grids land in different
+places on the same axes.
+:::
+
+## Reading a Choropleth
+
+A **choropleth** colors each region by the value of a variable — the
+workhorse of spatial data visualization, and one line in GeoPandas:
+
+```python
+municipios.plot(column="area_km2", cmap="YlGnBu", legend=True)
+```
+
+By default the colors span the value range continuously; binned variants
+exist too (`scheme="quantiles"`, via the `mapclassify` package) and help
+when one extreme region would otherwise wash out the scale.
+
+The eye reads dark as "more". That makes choropleths powerful and also
+gives them their classic failure mode: **regions with more land collect
+more of almost anything**, so a raw-count choropleth largely repaints the
+map of region sizes. Watch the same two regions colored two ways:
+
+![Two side-by-side maps of the same pair of regions, one large and one small. On the left, colored by raw event counts, the large region is dark red with 12 events and the small one pale with 8. On the right, colored by events per square kilometer, the coloring flips: the small region is dark red at 2.0 per square kilometer and the large one pale at 0.12.](assets/l12_counts_vs_density.png)
+
+**Reading the output:** the left map says the big region has the problem
+(12 events beats 8). The right map divides by area and the story flips —
+the small region packs 2.0 events per km2, seventeen times the big one's
+0.12. Neither map lies about its own variable; they answer *different
+questions*. "Where were there more events?" is rarely what anyone means;
+"where was it *intense*?" usually is — and that needs **normalization**:
+divide counts by area (density), by population (rate), or by whatever
+exposure the question implies.
+
+## Layering, and Joining by Location
+
+Real maps combine layers: polygons for context, points for events. In
+GeoPandas that is just two `.plot()` calls on the same axes (lab Step 4) —
+once both layers share a CRS.
+
+The quieter superpower is the **spatial join** — but it needs one piece of
+plain-pandas vocabulary this course has not used until now. A **merge**
+lines up the rows of two tables wherever a chosen *key* matches: attach
+each municipio's earthquake count to its boundary row by matching the
+municipio *name*, say. (SQL calls the same operation a *join*.) A spatial
+join is that idea with the key replaced by *location*:
+
+```python
+located = gpd.sjoin(quakes, municipios, how="left", predicate="within")
+```
+
+Each earthquake row comes back carrying the columns of the municipio whose
+polygon contains it — "which municipio was each epicenter in?" answered in
+one call. Counting rows per municipio then turns 250 scattered points into a
+per-region variable you can choropleth. In the lab this yields the lesson's
+most honest number: only **56 of the 250** epicenters fall inside *any*
+municipio — the sequence was mostly offshore, and the join's unmatched rows
+(NaN) are exactly how you find that out.
+
+## When to Use Which
+
+- **Point map (events over a basemap)** — when individual locations and
+  their attributes (magnitude, time) are the story. Breaks down past a few
+  thousand overlapping points.
+- **Choropleth of a normalized value** — when the story is regional
+  intensity or rate: events per km2, cases per 1,000 residents.
+- **Choropleth of raw counts** — almost never; only when regions are nearly
+  equal-area or the absolute count *is* the question (resource allocation).
+- **A table, not a map** — when location explains nothing (the top-5 list
+  by magnitude needs no geography). A map that shows no spatial pattern is
+  decoration.
+
+## Common Pitfalls
+
+- **Measuring in degrees.** Area or distance computed in a geographic CRS is
+  arithmetic on a meaningless unit. GeoPandas warns you — read the warning.
+  Reproject first.
+- **Mismatched CRS between layers.** Two layers on different grids plot in
+  different coordinate ranges (your points land in the ocean — or off the
+  axes entirely) and spatial joins refuse or mismatch. Align with
+  `to_crs(other.crs)` before combining.
+- **Raw-count choropleths.** Dark just means big (or populous). Normalize by
+  the relevant exposure, and say which one you chose.
+- **Trusting centroids blindly.** A centroid is the geometric balance point;
+  for odd shapes or multi-island municipios it can fall outside the polygon
+  itself (or in the sea). Fine for distance summaries, risky as a "location"
+  label.
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Given descriptions of several datasets, pick the one that is vector spatial data and name what its geometry column holds <!-- obj 1 · Understand · Moodle MC -->
+- An analyst sums polygon areas and gets 0.76 for a whole territory; diagnose what went wrong and name the fix <!-- obj 2 · Apply · Moodle MC -->
+- Given a raw-count choropleth and a per-km2 choropleth of the same events, pick which supports a stated claim about intensity <!-- obj 3 · Analyze · Moodle MC -->
+- Pick the operation that answers "which region contains each event": spatial join vs column merge vs groupby <!-- obj 4 · Apply · Moodle MC -->
+
+## FAQ / Industry Reality
+
+**"Why not just scatter-plot the longitudes and latitudes?"** — For a first
+look, that is genuinely fine (it is what `.plot()` does with points). What it
+cannot give you: boundaries for context, honest areas and distances, or any
+"which region contains this point" logic. The GeoDataFrame keeps the table
+and the geography in one object so those questions stay one-liners.
+
+**"Do professionals use this, or do they use ArcGIS/QGIS?"** — Both, for
+different jobs. Dedicated GIS tools shine for cartography and editing
+geometry by hand. For *data-science* workflows — join, aggregate, normalize,
+map, repeat — code wins, and GeoPandas is the standard Python entry point.
+The heavier stack (PostGIS, raster tooling) exists when you outgrow it.
+
+**"Where do I get boundaries for other places?"** — For the US and its
+territories: the Census cartographic boundary files (what the lab uses —
+public domain, many resolutions). Worldwide: Natural Earth (public domain)
+and GADM (free for academic use). Always check the license and pick the
+coarsest resolution that serves the map.
+
+## Cheat-sheet
+
+| Task | Call |
+|---|---|
+| Read a shapefile zip / GeoJSON | `gpd.read_file(path_or_url)` |
+| Check / set the grid | `gdf.crs` · `gdf.to_crs(epsg=32161)` |
+| Merge polygons by an attribute | `gdf.dissolve(by="col")` |
+| Real area in km2 | project first, then `gdf.geometry.area / 1e6` |
+| Color regions by a value | `gdf.plot(column="col", legend=True)` |
+| Layer two datasets | two `.plot(ax=ax)` calls, same CRS |
+| Join by location | `gpd.sjoin(pts, polys, predicate="within")` |
+| Counts into density | divide by `area_km2` (or population) |
+
+## Where to Go Deeper
+
+- **Official docs:** [GeoPandas User Guide](https://geopandas.org/en/stable/docs/user_guide.html) — data structures, projections, mapping, and merging, in the same order this lesson uses them.
+- **The boundary source:** [Census Bureau — Cartographic Boundary Files](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) — every US state/territory at three resolutions, public domain.
+- **The event source:** [USGS Earthquake Catalog API](https://earthquake.usgs.gov/fdsnws/event/1/) — the query interface behind the lab's GeoJSON, with all its parameters documented.

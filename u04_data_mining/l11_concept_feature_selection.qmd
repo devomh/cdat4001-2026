@@ -1,0 +1,310 @@
+---
+title: "Finding the Features That Matter: Filters, Trees, and Forests"
+unit: "IV"
+lesson: "11"
+type: concept
+tags: [feature-selection, chi-square, decision-trees, random-forests, classification]
+difficulty: introductory
+duration: "50 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Explain** why selecting a few informative features beats keeping thousands of weak ones. *(Understand)*
+- **Rank** features with a chi-square filter score and **interpret** the top of the ranking. *(Apply)*
+- **Train** a shallow decision tree on selected features, **read** its splits in plain language, and **compare** its accuracy against the full feature set and an honest baseline. *(Apply / Analyze)*
+- **Describe** how a random forest aggregates many randomized trees, and **judge** the trade between its accuracy and a single tree's readability. *(Understand / Analyze)*
+
+> **Where this sits:** after **L10** built a 5,574 x 2,003 feature matrix from raw text · closes Unit IV (extracting information from data) · next, Unit V turns to *showing* patterns — visualization.
+
+> **Hands-on:** [Lab — From 2,003 Features to the 30 That Matter](l11_lab_feature_selection_spam.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u04_data_mining/l11_lab_feature_selection_spam.ipynb)
+
+## Why This Matters
+
+In L10 you turned 5,574 text messages into a feature matrix with **2,003 columns**.
+Now your boss asks the obvious question: *"So — what makes a message spam?"*
+
+You cannot answer with 2,003 numbers. Most of those columns are noise: words that
+appear a handful of times, words that appear equally in both classes, words that
+duplicate what another column already says. Somewhere in the matrix, a small set of
+features carries nearly all the signal. Finding it is called **feature selection**,
+and it is the skill this unit's title promises: *extracting information* from data.
+
+The payoff is concrete. By the end of the paired lab, a decision rule small enough
+to read aloud — three questions about a message — classifies spam almost exactly as
+well as the full 2,003-column matrix. And you will know precisely *which* features
+earned their place.
+
+## What Is Feature Selection?
+
+> **Analogy:** a detective canvassing an apartment building interviews two hundred
+> residents, but the case turns on two witnesses. The skill is not collecting more
+> statements — it is recognizing which two matter.
+
+**Feature selection** is choosing a subset of the existing columns to keep, and
+discarding the rest. It is the complement of L10's skill: feature *engineering*
+invented columns; feature *selection* decides which ones deserve to stay. Three
+reasons to do it:
+
+- **Interpretability.** Thirty features can be inspected, plotted, and explained
+  to a boss. Two thousand cannot.
+- **Noise.** Useless columns do not just sit quietly — an algorithm searching for
+  patterns can find accidental ones in them. Fewer, better features means fewer
+  chances to be fooled.
+- **Cost.** Every column must be computed, stored, and maintained for every new
+  observation, forever. A feature that earns nothing still bills you.
+
+To *select* the best features, though, we need a way to *score* them — and the most
+honest scorecard is how well they support a prediction. That requires a short detour.
+
+## A Short Detour: Teaching the Machine to Decide
+
+This is the course's first contact with **supervised classification**, and we take
+just enough of it to score feature sets — five terms:
+
+- The **label** is the answer column: `ham` or `spam`, recorded for every message
+  in our collection. Supervised means *the answers are known* for the data we
+  learn from.
+- A **classifier** is an algorithm that learns, from labeled examples, a rule that
+  maps a feature vector to a predicted label. In scikit-learn the two verbs are
+  `fit` (learn from examples) and `predict` (apply the learned rule to new ones).
+- A **train/test split** divides the data — typically 70% for fitting, 30% held
+  back for testing. The rule is graded **only on messages it never saw**, exactly
+  like an exam made of questions that were not on the study guide. Grading on the
+  training data rewards memorization, and memorization does not transfer.
+- **Accuracy** is the fraction of test messages classified correctly.
+- A **baseline** is the accuracy of the laziest possible strategy. Our dataset is
+  13.4% spam, so the rule "predict *ham* for everything" already scores **86.6%**.
+
+::: {.callout-important title="Accuracy starts at the baseline, not at zero"}
+Whenever classes are imbalanced, quote the majority-class baseline next to any
+accuracy. A spam filter scoring 90% sounds impressive until you know that doing
+*nothing* scores 86.6%. The interesting quantity is the distance above the
+baseline, not the distance above zero.
+:::
+
+That is the whole detour. Now we can score features: a feature set is good if a
+classifier built on it predicts held-out labels well — or, even before any
+classifier exists, if the feature's values move visibly with the label. That
+"moves with the label" idea is the first family.
+
+## Family 1: Filters — Score Each Feature on Its Own
+
+A **filter method** scores every feature *independently* against the label, ranks
+them, and keeps the top *k*. No classifier is involved — it is a statistical test
+applied 2,003 times. You have seen this move before: in L08, Pearson's *r* scored
+the relationship between two numeric variables with one number. A filter score
+does the same job for *feature versus label*.
+
+The classic filter for count data is the **chi-square ($\chi^2$) score**. Its question:
+*does this feature appear differently across the classes than chance would
+predict?* Take the word "free" in the real corpus:
+
+| | contains "free" | does not | total |
+|---|---|---|---|
+| **spam** | **170** | 577 | 747 |
+| **ham** | 59 | 4,768 | 4,827 |
+| **total** | 229 | 5,345 | 5,574 |
+
+If "free" ignored the label, spam's share of it would match spam's share of the
+corpus: $229 \times (747 / 5574) \approx$ **31 spam messages** would contain "free". We observe
+**170** — more than five times the expected count. The chi-square statistic adds up
+gaps like that (squared, scaled by the expected counts) across the table's cells;
+for this table it comes to roughly **760**. A word distributed indifferently to the
+label scores near **zero** — in the lab, the word "email" scores 0.000 to three
+decimals, meaning it appears at almost exactly the same rate in spam and ham and
+is useless for telling them apart.
+
+*(scikit-learn's `chi2` scorer applies the same idea to the count values themselves
+rather than to presence/absence, and the lab computes it on the training split
+only — so its numbers differ in detail, but the ranking logic is identical.)*
+
+Filters are fast and scale to any width — scoring 2,003 features takes milliseconds.
+Their blind spot: each feature is judged **alone**, so a pair of features that only
+work *in combination* will both score poorly. Catching interactions requires a
+method that considers features together — which is exactly what a tree does.
+
+## Family 2: Decision Trees — Selection by Questioning
+
+A **decision tree** classifies by asking a sequence of yes/no questions about the
+features, one per node, until it reaches a leaf that names a class. Here is a tree
+a human might build for six toy messages:
+
+| message | digit_count | contains "prize" | label |
+|---|---|---|---|
+| "ok see you at 5" | 1 | no | ham |
+| "running late sorry" | 0 | no | ham |
+| "FREE prize waiting claim now" | 0 | yes | spam |
+| "call 09061701461 to collect" | 11 | no | spam |
+| "are you free for lunch" | 0 | no | ham |
+| "win cash text WIN to 81010" | 5 | no | spam |
+
+```{mermaid}
+flowchart TD
+    A{"digit_count > 4 ?"} -->|yes| B["spam (2 of 2 correct)"]
+    A -->|no| C{"contains 'prize' ?"}
+    C -->|yes| D["spam (1 of 1 correct)"]
+    C -->|no| E["ham (3 of 3 correct)"]
+```
+
+**Reading the output:** the root question alone (`digit_count > 4?`) cleanly
+captures the two number-stuffed spam messages; one more question (`contains
+"prize"?`) catches the digit-free spam. Notice the tree did *not* ask about "free",
+even though L10 found it spam-flavored — "are you free for lunch" is ham, so on
+these six messages "free" misfires where "prize" does not. The tree found that out
+by itself.
+
+How? At each node the algorithm tries **every feature and every threshold** and
+keeps the question whose answer best separates the classes — the split that leaves
+the two resulting groups as *pure* (single-class) as possible. Then it repeats
+inside each group, until the groups are pure or a **depth** limit stops it. Depth
+is the honesty knob: a depth-3 tree asks at most three questions per message, so
+whatever it learns must be expressible in three questions.
+
+That mechanism makes the tree a feature selector for free: **the features it
+spends its questions on are the selection.** Give it 2,003 candidates and a depth
+of 3, and the handful of features appearing in its nodes are the ones that earned
+a place.
+
+::: {.callout-note collapse="true" title="Deep Dive: how 'purity' is measured (optional)"}
+The standard purity score is **entropy**: $H = -\sum_i p_i \log_2 p_i$, summed
+over the classes. A group that is all one class has $H = 0$ (perfectly pure); a
+50/50 group has $H = 1$ (maximum confusion). A 75/25 split sits in between:
+
+$$
+H = -\left(0.75 \log_2 0.75 + 0.25 \log_2 0.25\right) = 0.811
+$$
+
+At each node the tree picks the split that most *reduces* entropy from parent to
+children (the "information gain"). scikit-learn's default uses a close cousin of
+entropy called the Gini impurity — same intuition, slightly cheaper to compute.
+:::
+
+## Family 3: Random Forests — Many Trees, One Vote
+
+One tree is readable but jumpy: a slightly different training sample can change an
+early split and reshuffle everything below it. A **random forest** embraces that
+instability — it grows hundreds of trees, each on a random resample of the training
+data and a random subset of features at each split, and classifies by **majority
+vote**. Individual trees' quirks cancel; the consensus is usually more accurate
+than any single tree.
+
+The forest also yields a second feature ranking: averaging how much each feature's
+splits purify the data, across all the trees, gives a **feature importance** score.
+In the lab, the forest's importance ranking and the chi-square filter — two methods
+with nothing in common internally — crown the same leaders. When independent
+methods agree, believe them.
+
+The price is the thing this lesson is about: **you can no longer read the model.**
+Two hundred trees voting is not an explanation. The forest buys accuracy by
+giving up exactly what made the single tree valuable.
+
+## Does Selecting Cost Accuracy?
+
+Here are the real numbers from the lab, on the held-out 30% of messages:
+
+| Model | Features used | Test accuracy |
+|---|---|---|
+| Majority-class baseline | 0 | 86.6% |
+| Decision tree, depth 3 | all 2,003 | 98.0% |
+| Decision tree, depth 3 | top 30 (chi-square) | 97.8% |
+| Random forest, 200 trees | all 2,003 | 99.1% |
+
+**Reading the output:** dropping 1,973 of the 2,003 features cost the tree **0.2
+percentage points**. Thirty columns do the work of two thousand — the signal was
+that concentrated. And this is the depth-3 tree the top-30 features buy:
+
+![The lab's depth-3 decision tree drawn as a diagram: the root node splits on digit_count at 4.5; its left branch asks about the words www and mobile, and its right branch refines on digit_count at 9.5 and message length near 180 characters. Leaves are colored orange for ham and blue for spam.](assets/l11_spam_tree.png)
+
+**Reading the output:** the root split is `digit_count <= 4.5` — the feature you
+*handcrafted* in L10 beat all 2,000 vocabulary columns to the most valuable
+position in the tree. Messages with five or more digits are essentially spam
+territory (refined by length); nearly digit-free messages are ham unless words
+like "www" or "mobile" appear. That is a spam filter you can read aloud in one
+breath — at 97.8% accuracy.
+
+## When to Use Which
+
+- **Filter (chi-square ranking)** — first move on any wide matrix: cheap, fast,
+  model-free triage from thousands of candidates down to dozens. Use it when
+  features should each carry signal alone; it cannot see interactions.
+- **Single shallow tree** — when the deliverable is an *explanation*: a readable
+  rule, a diagram for a meeting, a policy a human signs off on. Slightly less
+  accurate, infinitely more accountable.
+- **Random forest** — when accuracy is the priority and a ranked feature list is
+  explanation enough; also the standard second opinion on a filter's ranking.
+- **Avoid selection entirely** when you have few features already (L09's twelve
+  Ames columns need no triage) — or when a regulation or scientific question
+  requires keeping a specific variable regardless of its score.
+
+## Common Pitfalls
+
+- **Selecting before splitting.** If you rank features on *all* the data and then
+  split for testing, the test set already leaked its preferences into the
+  selection — your accuracy is gently inflated and you will not notice. An
+  earlier version of this course's spam project made exactly this mistake. Fit
+  the selector on the training split only, like any other learned step.
+- **Chi-square needs non-negative features.** It reasons about counts, so columns
+  holding negative values (differences, values centered at zero) break its math —
+  scikit-learn will refuse. Counts, lengths, and 0/1 indicators are all safe; for general
+  numeric features other filter scores exist.
+- **Importance is not causation.** "digit_count ranks first" means it *separates
+  the classes in this collection*, not that digits cause spam. A spammer who
+  spells out "oh-eight-hundred" defeats the feature without changing what the
+  message is.
+- **Correlated features split the credit.** `length` and `digit_count` partly
+  overlap (digit-heavy messages run long); a forest divides importance between
+  them. A feature ranked 15th might be a casualty of redundancy, not uselessness —
+  drop one twin and the other's importance jumps.
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Given a scenario (2,000 features vs 12 features; explanation needed vs not), decide whether feature selection is called for and why <!-- obj 1 · Understand · Moodle MC -->
+- Given a small word-by-class count table, pick the word a chi-square filter would rank highest (and the one it would score near zero) <!-- obj 2 · Apply · Moodle MC -->
+- Given a printed two-level tree, classify a described message by walking the splits <!-- obj 3 · Apply · Moodle MC -->
+- The forest scores 99.1%, the depth-3 tree 97.8%: pick the right model for a stated goal (audit/explanation vs raw accuracy) and justify <!-- obj 4 · Analyze · Moodle MC -->
+
+## FAQ / Industry Reality
+
+**"Why not just keep all 2,003 features? Storage is cheap."** — Storage is cheap;
+*attention* is not. Every kept feature is a column someone must compute for every
+future message, a knob that can drift or break, and a chance for the model to
+learn an accidental pattern. The lab's forest rates 1,280 of the 2,003 features
+below 0.0001 importance — most of that matrix is dead weight being hauled around.
+
+**"The forest got 99.1% — are we done?"** — Not yet, for two honest reasons.
+First, accuracy treats every mistake as equal — but silently deleting a message
+from your mother and letting one ad through are *not* equal mistakes. On
+imbalanced classes you need scores that separate the two error types (they are
+called precision and recall — the natural next step, not taught here). Second,
+"done" depends on the deliverable: in many settings the *explanation is the
+product* — a bank declining a loan, a spam policy a regulator audits — and a
+readable rule that gives up one point of accuracy is the better engineering
+decision. Know what you are actually optimizing before celebrating the number.
+
+**"Is this machine learning?"** — Yes — `fit`, `predict`, train/test: you have
+just done supervised learning. This course stops at using classifiers to *extract
+and validate information* (which features matter, what the rule says); the craft
+of modeling itself — tuning, validation, the menu of algorithms — fills a course
+of its own.
+
+## Cheat-sheet
+
+| Situation | Move | Call |
+|---|---|---|
+| Thousands of candidate features | filter-rank, keep top *k* | `SelectKBest(chi2, k=...)` |
+| Need an honest score for a feature set | train/test split + accuracy vs baseline | `train_test_split`, `.score` |
+| Deliverable is a readable rule | shallow tree, then read it | `DecisionTreeClassifier(max_depth=3)`, `export_text` |
+| Accuracy first, list of drivers second | random forest + importances | `RandomForestClassifier`, `.feature_importances_` |
+| Tempted to select on all the data | don't — fit the selector on train only | `SelectKBest(...).fit(X_train, y_train)` |
+
+## Where to Go Deeper
+
+- **Official docs:** [scikit-learn — Feature selection](https://scikit-learn.org/stable/modules/feature_selection.html) — SelectKBest, chi2, and the model-based selectors this lesson previews.
+- **Book chapter:** [Python Data Science Handbook — In-Depth: Decision Trees and Random Forests](https://jakevdp.github.io/PythonDataScienceHandbook/05.08-random-forests.html) (VanderPlas) — the tree/forest mechanics with visuals.
+- **The dataset's paper:** Almeida, T. A., Gomez Hidalgo, J. M., & Yamakami, A. (2011). "Contributions to the Study of SMS Spam Filtering: New Collection and Results", *ACM DocEng 2011* — what accuracy is achievable on this corpus with heavier machinery.
