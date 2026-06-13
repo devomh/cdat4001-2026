@@ -28,7 +28,9 @@ same data (`data/aq_fallback.json`, fetched from the same API at authoring time)
 ```python
 # Setup: run this cell first (required for Colab -- it resets on open)
 %pip install -q requests pandas duckdb==1.4.2   # duckdb pinned (API we teach); requests/pandas float -- Colab preinstalls them
+```
 
+```python
 import json, os, requests
 import pandas as pd, duckdb
 

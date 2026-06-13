@@ -28,7 +28,9 @@ repetitive, which is exactly what columnar compression loves.
 ```python
 # Setup: run this cell first (required for Colab — it resets on open)
 %pip install -q duckdb==1.4.2 pandas pyarrow numpy   # duckdb pinned; rest float (Colab preinstalls)
+```
 
+```python
 import numpy as np, pandas as pd, duckdb, os, time
 os.makedirs("data", exist_ok=True)
 

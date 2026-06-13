@@ -29,7 +29,9 @@ sees identical results.
 ```python
 # Setup: run this cell first (required for Colab -- it resets on open)
 %pip install -q pandas matplotlib seaborn
+```
 
+```python
 import os
 import pandas as pd
 import matplotlib.pyplot as plt

@@ -26,7 +26,9 @@ written to Parquet (for Spark).
 ```python
 # Setup: run this cell first (required for Colab -- it resets on open)
 %pip install -q pyspark==4.1.2 pandas numpy pyarrow   # pyspark pinned (API we teach); rest float -- Colab preinstalls them
+```
 
+```python
 import os, shutil
 import numpy as np, pandas as pd
 

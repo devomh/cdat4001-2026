@@ -37,7 +37,9 @@ needed.
 ```python
 # Setup: run this cell first (required for Colab - it resets on open)
 %pip install -q pandas numpy matplotlib seaborn scikit-learn
+```
 
+```python
 import os
 import urllib.request
 import numpy as np

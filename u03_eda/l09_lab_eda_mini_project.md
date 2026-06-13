@@ -55,7 +55,9 @@ The dataset is from the Kaggle "House Prices" competition
 ```python
 # Setup: run this cell first (required for Colab -- it resets on open)
 %pip install -q scikit-learn pandas matplotlib seaborn
+```
 
+```python
 import os
 import numpy as np
 import pandas as pd

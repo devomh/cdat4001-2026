@@ -30,7 +30,9 @@ session).
 ```python
 # Setup: run this cell first (required for Colab -- it resets on open)
 %pip install -q pandas matplotlib seaborn scikit-learn
+```
 
+```python
 import os
 import numpy as np
 import pandas as pd

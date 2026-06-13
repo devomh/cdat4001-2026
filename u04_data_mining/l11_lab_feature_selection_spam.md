@@ -28,7 +28,9 @@ UCI Machine Learning Repository id 228, CC BY 4.0), bundled as
 ```python
 # Setup: run this cell first (required for Colab -- it resets on open)
 %pip install -q pandas matplotlib scikit-learn scipy
+```
 
+```python
 import os
 import numpy as np
 import pandas as pd

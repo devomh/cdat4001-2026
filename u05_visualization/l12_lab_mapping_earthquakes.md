@@ -36,7 +36,9 @@ deterministic, so no seed is needed.
 ```python
 # Setup: run this cell first (required for Colab -- it resets on open)
 %pip install -q geopandas pandas matplotlib
+```
 
+```python
 import os
 import urllib.request
 import pandas as pd

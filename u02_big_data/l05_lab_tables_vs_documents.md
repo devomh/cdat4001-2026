@@ -27,7 +27,9 @@ purpose, because that raggedness is the whole lesson.
 ```python
 # Setup: run this cell first (required for Colab -- it resets on open)
 %pip install -q tinydb==4.8.2 duckdb==1.4.2 pandas numpy   # tinydb/duckdb pinned (APIs we teach); pandas/numpy float -- Colab preinstalls them
+```
 
+```python
 import json, os
 import numpy as np, pandas as pd, duckdb
 from tinydb import TinyDB, Query
