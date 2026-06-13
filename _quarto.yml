@@ -51,6 +51,10 @@ website:
           - u05_visualization/l13_lab_san_juan_climate.md
           - u05_visualization/l14_concept_many_variables_pca.qmd
           - u05_visualization/l14_lab_penguins_pca.md
+      - section: "Unit VI — Recommender Systems"
+        contents:
+          - u06_recommender_systems/l15_concept_recommender_systems.qmd
+          - u06_recommender_systems/l15_lab_movie_recommenders.md
 
 format:
   html:
