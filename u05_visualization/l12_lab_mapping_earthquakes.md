@@ -14,9 +14,9 @@ sequence, fix the coordinate problem, and combine the two layers into maps
 that answer "where did it hit?". Pairs with the concept note
 [Mapping Puerto Rico: Spatial Data with GeoPandas](l12_concept_spatial_geopandas.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l12_lab_mapping_earthquakes.ipynb`) -- in Colab via the badge on the
-> concept page, or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l12_lab_mapping_earthquakes.ipynb`) -- in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u05_visualization/l12_lab_mapping_earthquakes.ipynb)
 
 ## Prerequisites & Setup
 

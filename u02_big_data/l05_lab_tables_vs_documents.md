@@ -13,9 +13,9 @@ table (DuckDB) and as documents kept whole (TinyDB) -- run the identical questio
 ways, and feel the trade. Pairs with the concept note
 [NoSQL: When Tables Don't Fit](l05_concept_nosql.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l05_lab_tables_vs_documents.ipynb`) -- in Colab via the badge on the concept page, or
-> locally.
+> This page is the read-only view. To run the lab, open the notebook (`l05_lab_tables_vs_documents.ipynb`) -- in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u02_big_data/l05_lab_tables_vs_documents.ipynb)
 
 ## Prerequisites & Setup
 

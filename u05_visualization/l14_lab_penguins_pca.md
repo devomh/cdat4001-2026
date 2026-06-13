@@ -15,9 +15,9 @@ parallel coordinates, why you must standardize, and how to read a PCA.
 Pairs with the concept note
 [Seeing Many Variables at Once: Parallel Coordinates and PCA](l14_concept_many_variables_pca.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l14_lab_penguins_pca.ipynb`) - in Colab via the badge on the concept
-> page, or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l14_lab_penguins_pca.ipynb`) - in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u05_visualization/l14_lab_penguins_pca.ipynb)
 
 ## Prerequisites & Setup
 

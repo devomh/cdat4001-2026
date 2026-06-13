@@ -14,9 +14,9 @@ survivors to a decision tree you can read aloud, and check the price of
 selection against an honest baseline. Pairs with the concept note
 [Finding the Features That Matter: Filters, Trees, and Forests](l11_concept_feature_selection.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l11_lab_feature_selection_spam.ipynb`) -- in Colab via the badge on the
-> concept page, or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l11_lab_feature_selection_spam.ipynb`) -- in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u04_data_mining/l11_lab_feature_selection_spam.ipynb)
 
 ## Prerequisites & Setup
 

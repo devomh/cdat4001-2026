@@ -13,9 +13,9 @@ the full correlation heatmap -- and then catch a real Simpson's paradox in the a
 Pairs with the concept note
 [Relationships Between Variables: Correlation & Bivariate Analysis](l08_concept_bivariate_correlation.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l08_lab_bivariate_correlation.ipynb`) -- in Colab via the badge on the concept page,
-> or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l08_lab_bivariate_correlation.ipynb`) -- in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u03_eda/l08_lab_bivariate_correlation.ipynb)
 
 ## Prerequisites & Setup
 

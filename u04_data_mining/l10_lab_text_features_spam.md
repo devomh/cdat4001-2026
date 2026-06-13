@@ -14,9 +14,9 @@ III's EDA skills to *verify* that the features carry signal. Pairs with the
 concept note
 [From Raw Data to Features: Turning Text into Numbers](l10_concept_feature_engineering.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l10_lab_text_features_spam.ipynb`) -- in Colab via the badge on the concept
-> page, or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l10_lab_text_features_spam.ipynb`) -- in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u04_data_mining/l10_lab_text_features_spam.ipynb)
 
 ## Prerequisites & Setup
 

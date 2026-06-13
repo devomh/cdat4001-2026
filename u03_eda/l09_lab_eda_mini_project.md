@@ -12,8 +12,9 @@ duration: "90 mins"
 relationships, synthesize findings -- on a dataset you haven't seen before.
 This is Unit III's capstone: everything from L07 and L08, applied end-to-end.
 
-> This page is the read-only view. To run the lab, open
-> `l09_lab_eda_mini_project.ipynb` locally or in Colab.
+> This page is the read-only view. To run the lab, open `l09_lab_eda_mini_project.ipynb` locally or in Colab.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u03_eda/l09_lab_eda_mini_project.ipynb)
 
 ## The Problem
 

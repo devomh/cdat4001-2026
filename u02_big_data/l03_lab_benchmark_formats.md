@@ -12,8 +12,9 @@ duration: "45 mins"
 rows. Pairs with the concept note
 [CSV vs Parquet: Choosing a Storage Format](l03_concept_csv_vs_parquet.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l03_lab_benchmark_formats.ipynb`) — in Colab via the badge on the concept page, or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l03_lab_benchmark_formats.ipynb`) — in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u02_big_data/l03_lab_benchmark_formats.ipynb)
 
 > **Note:** timings below are from one machine. **Your absolute numbers will differ; the
 > ratios are the lesson.**

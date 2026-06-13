@@ -13,8 +13,9 @@ air quality?* -- by acquiring PM2.5 readings from a live web API, flattening the
 ranking with one GROUP BY. Pairs with the concept note
 [JSON & Web APIs: Acquiring Semi-Structured Data](l04_concept_json_web_apis.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l04_lab_air_quality_api.ipynb`) -- in Colab via the badge on the concept page, or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l04_lab_air_quality_api.ipynb`) -- in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u02_big_data/l04_lab_air_quality_api.ipynb)
 
 ## Prerequisites & Setup
 

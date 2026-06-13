@@ -13,8 +13,9 @@ values, and the three one-variable plots -- and practice *reading* every output.
 with the concept note
 [One Variable at a Time: Distributions & Summary Statistics](l07_concept_univariate_eda.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l07_lab_univariate_eda.ipynb`) -- in Colab via the badge on the concept page, or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l07_lab_univariate_eda.ipynb`) -- in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u03_eda/l07_lab_univariate_eda.ipynb)
 
 ## Prerequisites & Setup
 

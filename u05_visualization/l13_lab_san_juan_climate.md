@@ -13,9 +13,9 @@ into its three temporal patterns: the long-term trend, the seasonal cycle,
 and the noise (with a hurricane hiding in it). Pairs with the concept note
 [Patterns in Time: Trend, Seasonality, and Noise](l13_concept_temporal_patterns.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l13_lab_san_juan_climate.ipynb`) -- in Colab via the badge on the
-> concept page, or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l13_lab_san_juan_climate.ipynb`) -- in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u05_visualization/l13_lab_san_juan_climate.ipynb)
 
 ## Prerequisites & Setup
 

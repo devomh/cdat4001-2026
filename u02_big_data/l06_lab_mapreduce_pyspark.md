@@ -13,9 +13,9 @@ Python), then run the same idea industrially -- PySpark in local mode over the 1
 transactions table, reading the lazy plan before triggering it. Pairs with the concept
 note [Computing at Scale: MapReduce & Spark](l06_concept_scaling_spark.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l06_lab_mapreduce_pyspark.ipynb`) -- in Colab via the badge on the concept page, or
-> locally (needs Java 11+; Colab has it preinstalled).
+> This page is the read-only view. To run the lab, open the notebook (`l06_lab_mapreduce_pyspark.ipynb`) -- in Colab via the badge below, or locally (needs Java 11+; Colab has it preinstalled).
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u02_big_data/l06_lab_mapreduce_pyspark.ipynb)
 
 ## Prerequisites & Setup
 

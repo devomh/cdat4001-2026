@@ -12,8 +12,9 @@ duration: "60 mins"
 the whole file into memory. Pairs with the concept note
 [Databases & SQL: Querying Where the Data Lives](l02_concept_databases_sql.qmd).
 
-> This page is the read-only view. To run the lab, open the notebook
-> (`l02_lab_querying_duckdb.ipynb`) — in Colab via the badge on the concept page, or locally.
+> This page is the read-only view. To run the lab, open the notebook (`l02_lab_querying_duckdb.ipynb`) — in Colab via the badge below, or locally.
+>
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u02_big_data/l02_lab_querying_duckdb.ipynb)
 
 ## Prerequisites & Setup
 
