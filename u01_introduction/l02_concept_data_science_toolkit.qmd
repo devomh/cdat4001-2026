@@ -1,0 +1,136 @@
+---
+title: "The Data Scientist's Toolkit: NumPy, pandas, and a First Clean"
+unit: "I"
+lesson: "02"
+type: concept
+tags: [numpy, pandas, dataframe, data-cleaning, tidy-data, toolkit]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Run** Python in a notebook and load the PyData stack (NumPy and pandas) with a reproducible setup. *(Apply)*
+- **Create and operate on** NumPy arrays with vectorized operations, and read an array's shape and dtype. *(Apply)*
+- **Build, inspect, select from, and summarize** a pandas DataFrame. *(Apply)*
+- **Perform** a first data-cleaning pass: detect and handle missing values, and fix a column's type. *(Apply / Analyze)*
+- **Explain** what tidy (rectangular) data is and why the table is the core data structure. *(Understand)*
+
+> **Hands-on:** [Lab — The Data Scientist's Toolkit](l02_lab_data_science_toolkit.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u01_introduction/l02_lab_data_science_toolkit.ipynb)
+
+> **Where this sits:** after **L01 — What Is Data Science?** · before **L03 — Big Data: Definitions & Challenges**.
+
+## Why This Matters
+
+L01 traced the air-quality question — *which town had the worst air last year?* — through the
+five stages but never touched data. This lesson picks up the **toolkit**: the two libraries
+you will use in every later unit, and the first real **Clean** step.
+
+::: {.callout-tip title="Analogy"}
+**NumPy is the engine; pandas is the dashboard.** NumPy gives you raw numeric horsepower —
+arrays of numbers you can compute on all at once. pandas wraps that in a labeled table with
+named columns and rows you can actually read. You drive with the dashboard, but the engine is
+doing the work underneath.
+:::
+
+## The Toolkit
+
+Almost all data work in Python sits on a small, stable stack. The two foundations:
+
+| Library | Gives you | You reach for it when |
+|---------|-----------|------------------------|
+| **NumPy** | the `ndarray`: a fast, fixed-type array; vectorized math | you have many numbers of one type and want speed |
+| **pandas** | the `DataFrame`: a labeled table (columns + index), built on NumPy | you have a *table* with named, mixed-type columns |
+
+pandas is built *on top of* NumPy, so they fit together: a DataFrame column is essentially a
+NumPy array with a label.
+
+## Core Ideas
+
+### NumPy arrays
+
+| Idea | What it means |
+|------|---------------|
+| **`ndarray`** | a grid of values, **all the same type**, of any dimension (1-D vector, 2-D matrix, ...) |
+| **`shape`** | the size along each dimension, e.g. `(6,)` or `(2, 2)` |
+| **`dtype`** | the single element type, e.g. `float64`, `int64` |
+| **Vectorization** | one operation applied to the whole array at once (`arr.mean()`, `arr > 15`) — shorter and far faster than a Python loop |
+
+### pandas DataFrame and Series
+
+| Idea | What it means |
+|------|---------------|
+| **`DataFrame`** | a 2-D table: named columns, an index, **a different type allowed per column** |
+| **`Series`** | one column of a DataFrame (a labeled 1-D array) |
+| **Inspect** | `.head()`, `.info()` (columns, non-null counts, dtypes), `.describe()` (numeric summary) |
+| **Select / filter** | `df["col"]` (a Series), `df[df["col"] > x]` (rows by condition) |
+
+### Tidy (rectangular) data
+
+::: {.callout-note}
+**Tidy data:** one **row per observation**, one **column per variable**, and **one proper
+type per column**. It is the shape every later tool — EDA, modeling, plotting — expects, so
+getting there is the goal of the first clean.
+:::
+
+## When to Use NumPy vs. pandas
+
+- **Use NumPy when:** the data is purely numeric and uniform — vectors, matrices, image
+  pixels — and you want raw speed without labels.
+- **Use pandas when:** you have a *table* with named columns of mixed types (text, dates,
+  numbers, categories) — which is almost every real dataset.
+- **Avoid:** hand-written Python loops over rows for arithmetic that a vectorized NumPy or
+  pandas call would do in one line.
+
+## A First Clean (preview)
+
+The lab builds a small air-quality table with two realistic defects — missing readings and a
+numeric column stored as text — and fixes both:
+
+```python
+# Illustrative (the runnable version is in the lab)
+aq["pm25"] = aq["pm25"].fillna(aq["pm25"].median())          # fill gaps with the median
+aq["temp_c"] = pd.to_numeric(aq["temp_c"].str.replace(",", ".", regex=False))  # text -> number
+```
+
+The payoff is a tidy table that `.describe()` will fully summarize — a text column is silently
+skipped until its type is fixed.
+
+## Common Pitfalls
+
+- **Reading `.describe()` and forgetting the text columns.** Columns left as `object` are not
+  summarized; check `.info()` for surprise `object` dtypes before trusting a summary.
+- **Filling missing values without thinking.** The median is a safe default here, but the
+  *right* choice depends on why the data is missing — a topic for the EDA unit.
+- **Looping in Python for array math.** It is slower and longer than the vectorized call.
+
+## FAQ / Industry Reality
+
+**"Why not just use Excel, or plain Python lists?"** — Excel is fine for a quick look but does
+not scale, version, or reproduce: you cannot rerun it on a fresh file and trust identical
+steps. Plain Python lists have no vectorized math and no labels. NumPy and pandas give you
+**reproducible, fast, labeled** data work — the reason they are the field's default tools.
+
+## Quiz Hooks
+
+*The things to retain — these feed the L02 retrieval quiz at the start of L03.*
+
+- A NumPy array has a **shape** and a single **dtype**; **vectorized** ops beat Python loops 
+- A **DataFrame** is a labeled table with mixed-type columns; an **ndarray** is raw numbers of one type 
+- **Detect and handle missing values** with `isnull().sum()` then `fillna(...)` 
+- **Tidy data**: one row per observation, one column per variable, one type per column 
+- A **text (object) column is not summarized** by `.describe()` until its type is fixed 
+
+## Where to Go Deeper
+
+- **Course text:** [VanderPlas, *Python Data Science Handbook*](https://jakevdp.github.io/PythonDataScienceHandbook/) — Ch. 2 (NumPy) and Ch. 3 (pandas).
+- **Official docs:** [pandas — "10 minutes to pandas"](https://pandas.pydata.org/docs/user_guide/10min.html) and [NumPy — "the absolute basics for beginners"](https://numpy.org/doc/stable/user/absolute_beginners.html).
+- **Concept:** [Wickham, *Tidy Data* (J. Stat. Soft., 2014)](https://www.jstatsoft.org/article/view/v059i10) — why the one-row-per-observation shape matters.
+
+> **Out of scope (deferred):** the **linear-algebra operations** on arrays — dot product,
+> matrix-vector and matrix-matrix products, transpose — get their own just-in-time lesson
+> (**L18**), right before PCA and recommender systems need them. Here arrays are only
+> containers of numbers.

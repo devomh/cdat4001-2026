@@ -1,0 +1,161 @@
+---
+title: "Big Data: Definitions, the Vs, and the Single-Machine Ceiling"
+unit: "II"
+lesson: "03"
+type: concept
+tags: [big-data, three-vs, volume, velocity, veracity, columnar, parquet, scaling]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Define** "big data" through the Vs — volume, velocity, variety, veracity — and **classify** which V a described failure exhibits. *(Understand)*
+- **Explain** the single-machine ceiling and contrast **scaling up** with **scaling out**. *(Understand)*
+- **Survey** the big-data platform landscape and place each of the next three lessons on it. *(Understand)*
+- **Contrast** row-oriented **CSV** with columnar **Parquet** on size and column access, and **predict** which format fits a workload. *(Analyze / Evaluate)*
+
+> **Hands-on:** [Lab — Big Data Challenges, Made Concrete](l03_lab_big_data_challenges.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u02_big_data/l03_lab_big_data_challenges.ipynb)
+
+> **Where this sits:** after **L02 — The Data Scientist's Toolkit** · before **L04 — Platforms at Scale: MapReduce & Spark** · opens Unit II (Big Data).
+
+## Why This Matters
+
+L01 made a promise in its FAQ: *most data-science questions fit on a laptop — and we would
+see, in Unit II, exactly where that line is.* This lesson is that line. We ask what makes
+data "big," what actually breaks when it outgrows one machine, and — in the lab — we make one
+of those challenges, **volume**, something you can *feel*: store a million rows two ways and
+measure the gap.
+
+::: {.callout-tip title="Analogy: counting Puerto Rico"}
+Imagine counting every form on the island. One option is a single, very fast clerk who reads
+every form (scale **up** — buy a bigger machine). The other is to have each of the 78
+municipalities count its own forms locally and mail in one subtotal (scale **out** — use many
+machines). Most of big data is variations on the second idea: split the work, compute where
+the data already is, and assemble the answer.
+:::
+
+## The Vs of Big Data
+
+"Big data" classically means data that is challenging along a few axes. The original three —
+with a fourth your syllabus emphasizes:
+
+| V | The challenge | What breaks on one machine |
+|---|---------------|----------------------------|
+| **Volume** | too much data | does not fit on disk or in RAM; a single pass takes hours or days |
+| **Velocity** | arriving too fast | ingestion cannot keep up; the analysis is stale before it finishes |
+| **Variety** | mixed shapes at once | one rigid schema cannot hold tables, JSON, and free text together |
+| **Veracity** | quality varies by source | cleaning (already most of the work) multiplies with every new source |
+
+The first three are the classic trio; **veracity** is the commonly added fourth, and it bites
+hardest at scale because every source you bolt on brings its own errors and gaps.
+
+## Data Shapes: the "Variety" Problem
+
+Variety is really L01's data-shape taxonomy seen at scale:
+
+| Shape | Example | Fits a table? |
+|-------|---------|---------------|
+| **Structured** | a sales table with fixed columns | yes — rows and columns |
+| **Semi-structured** | JSON from a web API; tags per record vary | partly — needs flattening |
+| **Unstructured** | free-text reviews, images, audio | no — needs features extracted first |
+
+A single relational table holds the first cleanly, the second awkwardly, and the third not at
+all — which is why "big data" needs more than one kind of store (the subject of **L05**).
+
+## The Single-Machine Ceiling
+
+Two honest observations before anyone reaches for a cluster.
+
+First, **the ceiling is high.** One modern laptop with pandas comfortably handles datasets in
+the hundreds of megabytes to a few gigabytes; a tuned single machine handles tens of GB. The
+million-row table in the lab is *not* big data — it runs in milliseconds — and that is the
+point: you should know where the real ceiling is before paying for a cluster.
+
+Second, when you *do* cross the ceiling, **moving the data becomes the enemy.** Copying tens
+of terabytes to one computer is hours of network time before any analysis begins. The cure
+inverts the usual flow:
+
+- **Scale up** — a bigger single machine (more RAM, more cores). Simple, but there is a
+  hard limit, and big machines cost more than linearly.
+- **Scale out** — many ordinary machines working in parallel. The data is split across them,
+  and the computation is **moved to where each piece lives** instead of the data being moved
+  to the computation.
+
+Scaling out is what makes "big data" a distinct discipline; **L04** shows the mechanics.
+
+## The Big-Data Platform Landscape
+
+When one machine is not enough, the work splits into a few categories of tooling. This table
+is also a map of the rest of Unit II:
+
+| Need | Platform category | Where you meet it |
+|------|-------------------|-------------------|
+| Store data too big for one disk | distributed file systems (Hadoop / HDFS) | **L04** |
+| Compute over data split across machines | cluster engines (MapReduce, **Spark**) | **L04** |
+| Query structured data; flexible non-tabular stores | **SQL** databases and **NoSQL** stores | **L05** |
+| Pull data in from the web | **REST APIs**, JSON over HTTP | **L06** |
+
+You do not need a cluster for any lesson in this course — but you do need to recognize which
+category a real problem calls for, and that is what Unit II builds.
+
+## One Challenge Up Close: Storage at Volume
+
+You will save and reload datasets constantly, and the **format** you choose changes both how
+big the file is and how fast every later read runs — for free, just by picking well. Two
+formats anchor the lab:
+
+- **CSV** is plain text, one record per line. Universal — every tool and human can read it —
+  but everything is stored as text (types re-inferred on every read), there is no compression,
+  and to answer a question about one column the reader must scan **every byte of every row**.
+- **Parquet** is a binary format that stores data **by column**, with types and per-column
+  compression. To average one column it reads **only that column**, already typed and
+  compressed; it can skip the rest entirely. The cost: it is binary, so you need a
+  Parquet-aware reader (pandas does it) rather than a text editor.
+
+::: {.callout-note title="Why columnar is cheaper"}
+A question like *"average amount per category"* touches two columns out of five. CSV, stored
+row by row, must still read all five to get there. Parquet, stored column by column, reads the
+two it needs and ignores the others. The lab measures both the size gap and this column-pruning
+effect on a million rows.
+:::
+
+## Which Format When
+
+- **Reach for CSV** when: exchanging data with anyone, the file is tiny, a human must read or
+  hand-edit it, or the receiving tool only accepts text.
+- **Reach for Parquet** when: you will analyze the data more than once, it is large, your
+  queries touch a few columns, or it feeds a pipeline.
+
+## Quiz Hooks
+
+*The things to retain — these feed the L03 retrieval quiz at the start of L04.*
+
+- The Vs (volume, velocity, variety, veracity) and **which V a described failure shows** 
+- **Scale up vs scale out**, and why large data favors moving the computation to the data 
+- Placing a task (store at scale / cluster compute / SQL-NoSQL / web API) on the platform map 
+- **CSV is row-oriented text; Parquet is columnar and compressed** — and *why* columnar wins a one-column aggregate 
+
+## FAQ / Industry Reality
+
+**"My 50 GB CSV — is that big data?"** — Almost certainly not. Convert it to Parquet, point
+pandas (or a single-machine database) at it, and it is an ordinary dataset on one computer.
+*"Does not fit in Excel"* is not the bar; *"does not fit on a machine"* is.
+
+**"Can I open a Parquet file in Excel?"** — Not directly; it is binary. Open it with pandas.
+That readability tradeoff is exactly the price you pay for the size and speed — which is why
+CSV is still the right call for small files a human needs to read.
+
+## Where to Go Deeper
+
+- **Official docs:** [Apache Parquet — file format](https://parquet.apache.org/docs/file-format/) — what "columnar" means on disk.
+- **Explainer:** [pandas — IO tools (CSV, Parquet, and more)](https://pandas.pydata.org/docs/user_guide/io.html) — the read/write calls used in the lab, side by side.
+- **The classic paper (an L04 teaser):** [Dean and Ghemawat (2004), *MapReduce: Simplified Data Processing on Large Clusters*](https://research.google/pubs/mapreduce-simplified-data-processing-on-large-clusters/) — the "split, compute locally, assemble" idea, formalized.
+
+> **Out of scope (deferred):** the **mechanics** of distributed compute — MapReduce phases,
+> HDFS, Spark, lazy evaluation — are **L04**; **SQL and NoSQL** querying is **L05**; pulling
+> data from **web APIs** is **L06**. This lesson defines the problem; the rest of Unit II
+> solves its pieces.

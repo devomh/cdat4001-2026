@@ -3,3 +3,9 @@
 **/*.quarto_ipynb
 .jupyter_cache/
 .ipynb_checkpoints/
+
+# L03/L04/L05 labs regenerate artifacts here from seeded setup cells (txns.csv/parquet,
+# corpus.txt, courses.json, catalog_db.json; ~58 MB) -- never tracked. L06 BUNDLES a small
+# API snapshot that MUST be tracked, so ignore the dir contents but re-include that one file.
+u02_big_data/data/*
+!u02_big_data/data/aq_snapshot.json

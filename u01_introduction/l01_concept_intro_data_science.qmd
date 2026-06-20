@@ -5,7 +5,7 @@ lesson: "01"
 type: concept
 tags: [data-science, process, data-sources, overview]
 difficulty: introductory
-duration: "50 mins"
+duration: "75 mins"
 ---
 
 ## Learning Objectives
@@ -13,10 +13,11 @@ duration: "50 mins"
 By the end of this lesson you will be able to:
 
 - **Distinguish** data science from machine learning, statistics, and data engineering. *(Understand)*
+- **Give** application areas of data science across the natural, commercial, and social sciences and social media. *(Understand)*
 - **Classify** a data source as structured, semi-structured, or unstructured. *(Analyze)*
 - **Trace** a real question through the five stages of the data-science process. *(Apply)*
 
-> **Where this sits:** first lesson of the course · before **L02 — Databases & SQL with DuckDB**.
+> **Where this sits:** first lesson of the course · before **L02 — The Data Scientist's Toolkit**.
 
 ## Why This Matters
 
@@ -50,6 +51,18 @@ its neighbors but isn't any one of them:
 | **Data engineering** | "Can I move/store this reliably at scale?" | pipelines, storage, availability |
 | **Data science** | "What should we *do* about this question?" | the whole loop: acquire, then decide, then communicate |
 
+### Where data science shows up
+
+Data science is not tied to one industry — the same loop runs everywhere data is produced.
+Only the questions and the data sources change:
+
+| Domain | Example questions | Typical data |
+|--------|-------------------|--------------|
+| **Natural sciences** | climate trends, genomics, air quality | sensor readings, gene sequences, imagery |
+| **Commercial / business** | demand forecasting, customer churn, pricing | transactions, server logs, CRM records |
+| **Social sciences** | mobility, public health, education outcomes | surveys, census, administrative records |
+| **Social media / the web** | recommendation, trend detection, sentiment | clicks, posts, the social graph |
+
 ### The data-science process
 
 Most of the work is *not* modeling. The process is a loop, not a line — findings at any
@@ -66,9 +79,11 @@ flowchart LR
 |-------|-------------|---------------------|
 | **1. Question** | a sharp, answerable question | I |
 | **2. Acquire** | raw data from files, DBs, APIs, the web | II (Big Data) |
-| **3. Clean** | a tidy, validated table | III (EDA) |
-| **4. Explore / Model** | patterns, summaries, simple models | III–IV, VI–VII |
+| **3. Clean** | a tidy, validated table | I (toolkit), III (EDA) |
+| **4. Explore / Model** | patterns, summaries, simple models | III-IV, VI-VII |
 | **5. Communicate** | a chart, map, or data product | V (Visualization), VIII (Governance) |
+
+*The units column shows where each stage is mainly **developed**, not its exclusive owner — cleaning, for example, starts with the toolkit in L02 and recurs in every later unit.*
 
 ### Where data comes from
 
@@ -84,7 +99,7 @@ Tracing the air-quality question through the five stages:
 
 1. **Question:** "Rank Humacao-region municipalities by mean PM2.5 (fine-particle air
    pollution) in 2024; flag any with <60% data coverage."
-2. **Acquire:** pull station readings (a CSV export or an API) — *the subject of L02–L05*.
+2. **Acquire:** pull station readings (a CSV export or an API) — *the subject of Unit II (L03-L06)*.
 3. **Clean:** drop sensor-error rows, align timestamps, handle missing days.
 4. **Explore:** group by municipality, average, rank.
 5. **Communicate:** a ranked bar chart with a confidence caveat for low-coverage towns.
@@ -94,7 +109,7 @@ the question, getting the data, and being honest about coverage — which is the
 this whole course.
 
 ```python
-# Illustrative only (read-only). The full pipeline is built across L02–L05.
+# Illustrative only (read-only). The full pipeline is built across Unit II (L03-L06).
 import pandas as pd
 readings = pd.read_csv("aq_2024.csv")                 # 2. acquire
 clean = readings.query("pm25 >= 0 and pm25 < 600")    # 3. clean (drop sensor errors)
@@ -116,11 +131,12 @@ Share with a neighbor; we'll collect three examples.
 
 ## Quiz Hooks
 
-*The 2–3 things to retain — these feed the retrieval quiz at the start of L02.*
+*The things to retain — these feed the L01 retrieval quiz at the start of L02.*
 
-- The **five stages** of the DS process, in order <!-- obj 3 · Understand · Moodle MC -->
-- **Classify** data as structured / semi-structured / unstructured <!-- obj 2 · Analyze · Moodle MC -->
-- **DS is not ML**: most DS work is acquire + clean + communicate <!-- obj 1 · Understand · Moodle MC -->
+- The **five stages** of the DS process, in order 
+- **Classify** data as structured / semi-structured / unstructured 
+- **DS is not ML**: most DS work is acquire + clean + communicate 
+- **Application areas**: DS appears across the natural, commercial, and social sciences and social media 
 
 ## FAQ / Industry Reality
 
@@ -131,8 +147,8 @@ model on the wrong data. And being honest about how data is collected and used �
 **governance**, the subject of Unit VIII — is part of the job, not an afterthought.
 
 **"Do I need 'big data' / Spark to do data science?"** — No. Most real questions fit
-comfortably in memory (or in DuckDB on a laptop). Reach for distributed tools only when
-the data genuinely doesn't fit — we'll see where that line is in Unit II.
+comfortably in memory (or a local database on a laptop). Reach for distributed tools only
+when the data genuinely doesn't fit — we'll see where that line is in Unit II.
 
 ## Where to Go Deeper
 

@@ -1,0 +1,173 @@
+---
+title: "SQL and NoSQL: Two Ways to Manage Data"
+unit: "II"
+lesson: "05"
+type: concept
+tags: [sql, nosql, duckdb, tinydb, document-store, schema-on-read, olap]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Read and write** a `SELECT ... WHERE ... GROUP BY ... ORDER BY` query, and read the relational model (including what a join is). *(Apply)*
+- **Distinguish** schema-on-write (relational) from schema-on-read (NoSQL), and name the NoSQL families. *(Understand)*
+- **Query** the same ragged dataset as a flattened table and as documents, and contrast the code each forces. *(Apply / Analyze)*
+- **Justify** choosing SQL or NoSQL for a described workload. *(Evaluate)*
+
+> **Hands-on:** [Lab — SQL and NoSQL on One Ragged Catalog](l05_lab_sql_and_nosql.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u02_big_data/l05_lab_sql_and_nosql.ipynb)
+
+> **Where this sits:** after **L04 — Platforms at Scale** · before **L06 — Web Data Acquisition with APIs** · the data-management lesson of Unit II.
+
+## Why This Matters
+
+Real records are often **ragged**. Picture a course catalog: some courses list prerequisites, some
+charge a lab fee, some do neither, and each nests a schedule. You have two honest ways to manage data
+like this -- force it into a fixed **relational table** and ask questions in **SQL**, or keep each
+record's own shape in a **document store** and query the shapes directly. Each way buys something and
+costs something. The working skill is not picking a side; it is recognizing which shape your data
+wants -- and most real teams run both.
+
+::: {.callout-tip title="Analogy: the warehouse and the order form"}
+A relational database is a well-organized warehouse, and SQL is the order form. You do not wander the
+aisles looping over rows -- you hand in a form describing *what* you want, and the query engine works
+out the fastest way to fetch it. That declarative style is why the same query runs unchanged on a
+laptop or a cluster.
+:::
+
+## The Relational Way: Tables and SQL
+
+A **relational table** is rows (records) by columns (fields), each column named and typed -- a
+spreadsheet with rules. You retrieve from it with `SELECT`:
+
+```sql
+SELECT department, AVG(credits) AS avg_credits   -- which columns (and computed values)
+FROM courses                                     -- which table
+WHERE lab_fee IS NOT NULL                         -- keep only some rows
+GROUP BY department                               -- one output row per department
+ORDER BY avg_credits DESC;                         -- sort the result
+```
+
+Read it in **execution order**, not written order: `FROM -> WHERE -> GROUP BY -> SELECT -> ORDER BY`.
+You describe the *result you want*; the engine decides *how* to compute it. This is the same
+group-and-aggregate shape you have already met twice -- the pandas `groupby` from L02 and the Spark
+`groupBy` from L04 -- now in its original, declarative form.
+
+When data is split across **two** tables, a **join** stitches them back together on a shared key --
+for example, courses and the departments that own them:
+
+```sql
+SELECT c.code, d.dept_name           -- read-only illustration (the lab uses one table)
+FROM courses c
+JOIN departments d ON c.department = d.dept_id;
+```
+
+A join is how the relational model keeps each fact in one place and recombines facts on demand.
+
+## OLTP vs OLAP: Two Jobs, Two Layouts
+
+Not all databases do the same job:
+
+| | **OLTP** (transactional) | **OLAP** (analytical) |
+|---|---|---|
+| Job | run the business: insert/update one row at a time | understand the business: scan many rows, few columns |
+| Example | "record this enrollment" | "average credits by department" |
+| Engine | PostgreSQL, MySQL, SQLite | **DuckDB**, BigQuery, Snowflake |
+| Storage | **row**-oriented | **column**-oriented |
+
+Analysis is OLAP work, and this is exactly L03's storage story: to average one column over many rows,
+a **column store reads only that column** (and compresses it well, because neighbors are alike),
+while a row store must touch every row. You measured that gap on CSV vs Parquet in L03; columnar SQL
+engines win analytical queries for the same reason.
+
+**DuckDB** is an in-process OLAP database -- "SQLite for analytics." There is no server to install
+(`pip install duckdb`), and it queries data files and pandas DataFrames directly, with real SQL and
+columnar speed. It is the lab's SQL engine.
+
+## The Document Way: Schema-on-Write vs Schema-on-Read
+
+The deepest difference between relational and NoSQL is *when structure is enforced*:
+
+| | Schema-on-write (relational) | Schema-on-read (NoSQL) |
+|---|---|---|
+| Structure checked | when data is **stored** -- a wrong shape is rejected | when data is **used** -- your code handles whatever arrives |
+| Ragged data (optional fields, lists) | NULL-padded columns, awkward | natural -- each document keeps its own shape |
+| Guarantee to later readers | strong: every row has every column, typed | weak: each document may differ |
+| Schema changes | migrate the table | just start writing the new shape |
+
+Neither is "better" -- they move the same work (handling shape) to different places. To put ragged
+records into a table you must **flatten** them (pandas `json_normalize` does this): optional fields
+become NULL-padded columns, and nested lists end up stranded inside single cells. A document store
+skips that step and stores each record as-is.
+
+::: {.callout-tip title="Analogy: apartments and self-storage"}
+A relational table is an apartment building: every unit has the same floor plan, so the address
+system is simple and the building scales cleanly. A document store is a self-storage facility: each
+unit holds whatever shape you bring, labeled by a key -- at the price of nobody guaranteeing what is
+inside any given unit.
+:::
+
+## The NoSQL Families
+
+"NoSQL" is an umbrella, not one design. The families you should be able to place:
+
+| Family | Unit of storage | Canonical tools | Typical use |
+|--------|-----------------|-----------------|-------------|
+| **Document** | a JSON-like document, queried by content | MongoDB; **TinyDB** (the lab's zero-server stand-in) | ragged records: catalogs, profiles, saved payloads |
+| **Key-value** | an opaque value behind a key | Redis | caches, sessions: "give me exactly this one thing, fast" |
+| **Wide-column** | sparse rows with per-row columns, spread across machines | Cassandra | huge write-heavy tables: sensor feeds, message stores |
+| **Graph** | nodes and edges | Neo4j | relationship-first questions -- the subject of Unit VII |
+
+Document stores are this lesson's focus. Cassandra and Redis are named so you can place them on the
+map; they are servers, so we use **TinyDB** -- a tiny, file-based document store -- to feel the
+document model without running infrastructure.
+
+## Which to Choose When
+
+- **Relational (SQL)** when: the data is genuinely tabular, many tools or people will query it,
+  aggregations dominate, or you need the schema as a *contract* for later readers.
+- **Document (NoSQL)** when: records are ragged or deeply nested, the shape evolves often, or you
+  mostly fetch whole records by content.
+- **Mixed is normal:** a common pipeline lands raw, ragged data in a document store, then flattens
+  the analysis-ready slice into tables -- each store where it is strong.
+
+::: {.callout-warning}
+NoSQL is not a SQL upgrade. Skipping schema design does not remove the work -- it moves it into every
+program that reads the data, forever. Choose schema-on-read because the *data* is ragged, not because
+schema design feels like effort.
+:::
+
+## Quiz Hooks
+
+*The things to retain -- these feed the retrieval quiz on this lesson, given at the start of L06.*
+
+- The SQL clause execution order `FROM -> WHERE -> GROUP BY -> SELECT -> ORDER BY` 
+- **OLTP vs OLAP** and which storage layout each uses (row vs column) 
+- **Schema-on-write vs schema-on-read**, and which NoSQL family stores what 
+- What **flattening** ragged documents into a table forces (NULL-padded columns; lists stranded in cells) 
+- Pick **SQL or NoSQL** for a described workload, and say why 
+
+## FAQ / Industry Reality
+
+**"If I know pandas, why learn SQL?"** -- Because the data usually arrives *in* a database, and
+pushing the filter and aggregation to the engine (instead of loading everything into Python) is
+faster, uses less memory, and is what every data team does. SQL is also far more portable across jobs
+and tools than any one library's API.
+
+**"Is SQL dying, then?"** -- The opposite: it keeps absorbing its challengers. Document databases grew
+SQL-like query layers, and engines like DuckDB read JSON directly. The professional skill is not
+picking a side; it is recognizing which shape your data wants -- most teams run both.
+
+## Where to Go Deeper
+
+- **Official docs:** [DuckDB — SQL Introduction](https://duckdb.org/docs/stable/sql/introduction) -- real SQL, example-driven, zero setup.
+- **Official docs:** [TinyDB — Getting Started](https://tinydb.readthedocs.io/en/latest/getting-started.html) -- the lab's whole document API in two pages.
+- **Article:** [Martin Fowler — Polyglot Persistence](https://martinfowler.com/bliki/PolyglotPersistence.html) -- why real systems mix stores, in two screens.
+
+> **Out of scope (deferred):** pulling data from **web APIs** (the `requests` workflow, live JSON) is
+> **L06** -- this lab builds its JSON locally. Real NoSQL servers (MongoDB, Cassandra, Redis) are
+> named only; multi-table JOINs beyond the one illustration, transactions, and indexing are out of
+> scope; **graph** stores get their own treatment in **Unit VII**.

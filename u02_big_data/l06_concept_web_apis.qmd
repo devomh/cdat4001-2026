@@ -1,0 +1,180 @@
+---
+title: "Web Data Acquisition with APIs"
+unit: "II"
+lesson: "06"
+type: concept
+tags: [json, web-api, requests, semi-structured, normalization, air-quality]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Describe** JSON's types and how nesting encodes structure that a flat table cannot. *(Understand)*
+- **Acquire** data from a web API with `requests`: endpoint, query parameters, status code. *(Apply)*
+- **Transform** nested JSON into a flat, analysis-ready table and query it. *(Apply)*
+- **Judge** when an API beats a file download, and respect rate limits. *(Evaluate)*
+
+> **Hands-on:** [Lab — Air Quality from a Live API](l06_lab_web_apis.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u02_big_data/l06_lab_web_apis.ipynb)
+
+> **Where this sits:** after **L05 — SQL and NoSQL** · closes Unit II (Big Data).
+
+## Why This Matters
+
+L01 asked: *which Humacao-area municipality had the worst air quality -- and how sure can we be?* --
+and promised that stage 2, **Acquire**, would become real in Unit II. This lesson delivers it. The
+data you need usually is not a file someone hands you; it sits behind a **web API**, and it arrives as
+**JSON** -- the semi-structured shape from L01's data-sources table. In the lab you will pull real
+PM2.5 readings for three municipalities and produce L01's ranked answer, coverage caveat included --
+the through-line that opened the course, closed.
+
+::: {.callout-tip title="Analogy: the restaurant counter"}
+A web API is a restaurant counter. You do not walk into the kitchen (the provider's database) -- you
+order from the menu (the documented endpoints and parameters), and the kitchen decides the plating
+(the JSON layout). The menu is a *contract*: same order, same dish.
+:::
+
+## JSON: Structure Without a Schema
+
+JSON (JavaScript Object Notation) is plain text built from just six types -- and that is the whole
+language:
+
+| JSON type | Looks like | Becomes in Python |
+|-----------|------------|-------------------|
+| object | `{"name": "Humacao"}` | `dict` |
+| array | `[3.7, 3.8, 3.9]` | `list` |
+| string | `"pm2_5"` | `str` |
+| number | `18.1496` | `int` / `float` |
+| boolean | `true` / `false` | `True` / `False` |
+| null | `null` | `None` |
+
+The power is **nesting**: objects inside arrays inside objects, to any depth. A flat table cannot hold
+"a municipality *containing* a list of 336 hourly readings" without repeating the municipality on
+every row -- JSON just nests it:
+
+```python
+# Illustrative only (read-only) -- the lab works with the real thing.
+import json
+
+text = """
+{
+  "municipality": "Humacao",
+  "coords": {"lat": 18.1496, "lon": -65.8276},
+  "readings": [3.7, 3.8, 3.9]
+}
+"""
+doc = json.loads(text)          # parse: text in, Python objects out
+doc["coords"]["lat"]            # navigate the nesting with keys -> 18.1496
+```
+
+This is exactly what **semi-structured** meant in L01: organized (keys, nesting, parseable) but not a
+fixed rows-and-columns schema. Each document can carry its own shape -- the same raggedness L05's
+document stores embraced, and the reason flattening (L05's `json_normalize`) exists.
+
+## Web APIs: Asking a Server for Data
+
+An API (Application Programming Interface) request is a URL with **query parameters**; the response is
+a **status code** plus a JSON body:
+
+```{mermaid}
+sequenceDiagram
+    participant C as Your notebook (client)
+    participant S as API server
+    C->>S: GET /v1/air-quality?latitude=18.15&hourly=pm2_5
+    S-->>C: 200 OK + JSON body
+```
+
+Reading the diagram: one round trip. The client states *what* it wants entirely through the URL's
+parameters; the server answers with a machine-readable verdict (the status code) before you ever look
+at the data.
+
+The three parts that matter:
+
+| Part | What it is | Example |
+|------|-----------|---------|
+| endpoint | the base URL -- *which service* | `https://air-quality-api.open-meteo.com/v1/air-quality` |
+| query parameters | key=value pairs -- *what exactly* | `latitude=18.15`, `hourly=pm2_5` |
+| status code | the server's verdict | `200` OK · `404` not found · `429` slow down · `500` server error |
+
+In Python, the `requests` library handles the encoding and the round trip:
+
+```python
+# Illustrative only (read-only) -- the lab runs this for real.
+import requests
+
+r = requests.get(endpoint, params={"latitude": 18.1496, "longitude": -65.8276,
+                                   "hourly": "pm2_5"})
+r.status_code      # 200 means "here is your data"
+data = r.json()    # parse the body straight into dicts and lists
+```
+
+::: {.callout-important}
+**Always check the status code before trusting the body.** A `404` or `429` response often still has
+a body -- an error message -- and code that skips the check happily "analyzes" it.
+`r.raise_for_status()` turns any non-2xx answer into a visible error.
+:::
+
+## From JSON to a Table
+
+Analysis tools want flat tables; APIs send nested trees. The bridge is **flattening** (also called
+*normalizing*, as in L05's `json_normalize`): walk the nesting and lay it out as columns, repeating
+the parent values down the rows.
+
+```python
+# The API's nested answer...
+{"municipality": "Humacao", "hourly": {"time": ["00:00", "01:00"], "pm2_5": [3.7, 3.8]}}
+
+# ...flattened to rows a GROUP BY can chew on:
+#   municipality   time    pm25
+#   Humacao        00:00   3.7
+#   Humacao        01:00   3.8
+```
+
+Two parallel arrays (`time` and `pm2_5`) become two columns; the municipality is repeated down its
+rows. That repetition is the price of flatness -- and the reason the nested form existed in the first
+place. Once flat, the **SQL `GROUP BY` from L05** applies unchanged, now answering L01's question on
+data you acquired yourself.
+
+## When an API Beats a File Download
+
+- **Use the API when:** the data updates continuously, you need a precise slice (three towns, two
+  weeks, one variable), or the dataset is far larger than your question.
+- **Prefer a file when:** a curated snapshot exists (the CSV/Parquet of L03), you need bit-for-bit
+  reproducibility frozen in time, or you would hammer the API for data that never changes.
+- The lab splits the difference: it fetches live, but **bundles a saved snapshot** of the response --
+  acquire once, analyze many times, and stay reproducible offline.
+
+## Quiz Hooks
+
+*The things to retain -- these feed the retrieval quiz on this lesson, given at the start of Unit III.*
+
+- Why **nesting** makes JSON semi-structured rather than tabular 
+- The parts of a **GET request** (endpoint + params) and what common **status codes** mean 
+- What **flattening** does to nested JSON, and what gets repeated down the rows 
+- **When an API beats a file** download, and respecting **rate limits** (`429`) 
+
+## FAQ / Industry Reality
+
+**"Can I just hit the API in a loop, as fast as possible?"** -- No. Public APIs enforce **rate
+limits** (that is status `429`); polite clients batch requests, cache responses to disk, and identify
+themselves. Professionals treat an API's terms like a license: the free tier that powers your project
+survives because users do not abuse it.
+
+**"Is this the same as web scraping?"** -- No. An API is a *published contract* for machines: stable
+parameters, structured JSON, documented limits. Scraping parses pages meant for humans -- it breaks
+when the page layout changes and may violate a site's terms. Always look for an API first; scrape only
+when there is none, and check the rules.
+
+## Where to Go Deeper
+
+- **Official docs:** [requests — Quickstart](https://requests.readthedocs.io/en/latest/user/quickstart/) -- params, status codes, `.json()`, all of today's surface.
+- **Explainer:** [MDN — An overview of HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Overview) -- the request/response cycle one level deeper.
+- **The lab's data source:** [Open-Meteo Air Quality API docs](https://open-meteo.com/en/docs/air-quality-api) -- a model API reference; see how the lab's parameters are documented.
+
+> **Out of scope (deferred / not covered):** authentication and API keys (the chosen API needs none);
+> pagination beyond one fixed request; **web scraping** (named only, contrasted above); streaming and
+> building your own API. Storing the raw payload in a **document store** was **L05**. This lesson
+> closes Unit II; **Unit III** turns acquired, clean data into exploratory analysis.

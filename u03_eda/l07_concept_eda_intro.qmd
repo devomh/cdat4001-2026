@@ -1,0 +1,177 @@
+---
+title: "What Is EDA? Goals & Mindset"
+unit: "III"
+lesson: "07"
+type: concept
+tags: [eda, exploratory-data-analysis, variable-types, levels-of-measurement, data-mindset]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Explain** what exploratory data analysis is, its goals, and where it sits in the data-science process. *(Understand)*
+- **Classify** a variable as categorical, ordinal, or numeric, and say what each type lets you do. *(Understand)*
+- **Form** explicit expectations about a dataset and **check** them with simple sanity checks. *(Understand)*
+- **Justify** exploring before modeling -- what EDA catches that a model's accuracy hides. *(Understand)*
+
+> **Where this sits:** after **L06 — Web Data Acquisition with APIs** (which closed Unit II) · opens **Unit III — Exploratory Data Analysis** · before **L08 — Univariate Analysis: Distributions & Statistics**.
+
+## Why This Matters
+
+A table lands in your inbox: a few thousand rows, tidy-looking columns, no obvious problems. You could
+feed it straight to a model. You could also *look at it first* -- and looking is what separates a result
+you can defend from one that just happens to compile.
+
+Consider three problems that no model will report to you:
+
+- An `age` column whose missing entries were filled with `-999`. The model never complains; it simply
+  learns that some people are nine hundred ninety-nine years below zero, and quietly skews every
+  prediction that touches age.
+- A `price` column that arrived as text -- `"$1,200"` -- so it sorts alphabetically and every average
+  over it is silently `NaN`.
+- A `municipality` column with `Humacao`, `humacao`, and `Humaco ` (trailing space) treated as three
+  different places.
+
+None of these throw an error. The model trains, returns a confident accuracy, and is wrong in ways the
+accuracy cannot show you. The fix is not a cleverer algorithm -- it is **looking at the data before
+trusting any number about it**. That habit has a name, *exploratory data analysis*, and John Tukey, who
+coined it, compressed it to one rule: **look first, model later**.
+
+This lesson is the mindset; the rest of Unit III is the toolkit -- summary statistics and distribution
+plots (L08), the broader catalogue of EDA plots (L09), and a full applied pass on a real dataset (L10).
+
+## What EDA Is
+
+::: {.callout-note title="Definition"}
+**Exploratory data analysis (EDA)** is the stage where you summarize and look at a dataset *before*
+modeling -- to learn its shape, surface its problems, and let it suggest hypotheses, instead of imposing
+yours on it untested. (The *how* -- the summary numbers and the plots -- arrives next lesson; this one is
+the why and the mindset.)
+:::
+
+Concretely, EDA has five goals:
+
+1. **Understand structure** -- how many rows and columns, what types, what units, one row means what.
+2. **Assess quality** -- missing values, duplicates, impossible or sentinel values.
+3. **See distributions** -- the center, spread, and shape of each variable (the *one-variable* view).
+4. **Find relationships** -- how variables move together (the *two-variable* view).
+5. **Generate hypotheses** -- questions worth modeling, and ones not worth the trouble.
+
+EDA is not a fixed checklist and not a phase you finish once. It is the discipline of *looking*, and
+you return to it every time the data or the question changes.
+
+## The EDA Workflow
+
+EDA is not separate from the data-science process -- it lives inside it. Recall the loop from **L01**:
+
+```{mermaid}
+flowchart LR
+    Q[1. Question] --> A[2. Acquire] --> C[3. Clean] --> E[4. Explore / Model] --> K[5. Communicate]
+    E -. new questions .-> Q
+    C -. data gaps .-> A
+    style C fill:#fff3cd
+    style E fill:#fff3cd
+```
+
+The two highlighted stages are EDA's home. **Cleaning** (stage 3) and **exploring** (stage 4) are not
+done once and in order -- they feed each other in a tight loop: you explore a column, the exploration
+exposes a quality problem, you clean it, and the clean version changes what you see. A surprise in stage
+4 often sends you back to stage 2 for more or better data (the dashed arrows). The goal of the whole
+loop is not a pile of plots; it is a small set of *decisions* -- which variables are usable, which need
+work, which hypotheses deserve a model.
+
+## Kinds of Variables
+
+Before you can pick the right summary or plot, you have to know what *kind* of variable you are looking
+at. Every column falls into one of a few types, and the type decides what you are allowed to do with it:
+
+| Type | What it is | Example in a PR dataset | Ordered? | Arithmetic meaningful? |
+|------|-----------|--------------------------|:--------:|:----------------------:|
+| **Categorical (nominal)** | unordered labels | `municipality`, `species`, `sex` | no | no |
+| **Ordinal** | ordered labels, gaps not equal or not known | survey rating `low/med/high`, education level | yes | no -- differences are not numbers |
+| **Discrete numeric** | integer counts | `rooms`, `household_size`, `n_visits` | yes | yes |
+| **Continuous numeric** | measured on a real scale | `income`, `pm2_5`, `temperature` | yes | yes |
+
+Two distinctions carry most of the weight:
+
+- **Categorical vs numeric.** You can *count* a categorical variable (how many of each label) but you
+  cannot average it -- the mean of `["Humacao", "Caguas"]` is nonsense. Numeric variables you can
+  average, but a code stored as a number (a ZIP code, a municipality ID) is *categorical wearing a
+  numeric costume* -- averaging it is a classic beginner error.
+- **Ordinal in between.** An ordinal variable has an order (`low < med < high`) so you can rank it and
+  take a median, but the gaps are not real numbers, so you should not average it: the distance from
+  `low` to `med` is not guaranteed to equal `med` to `high`.
+
+::: {.callout-note title="The classic four levels"}
+Statisticians name four *levels of measurement* -- **nominal, ordinal, interval, ratio** -- in order of
+how much arithmetic each supports (nominal: none; ratio: all, with a true zero). For this course the
+practical split above -- categorical / ordinal / numeric -- is what you act on; the four-level scheme is
+the same idea drawn finer.
+:::
+
+Why this matters now: each type gets its own summary and its own picture. **L08** picks the right
+*number* for each type (counts for categories, median and IQR for skewed numerics, and so on) and the
+right *one-variable plot*; **L09** does the same for relationships between two variables. Naming the type
+first is what keeps you from computing a mean no one should ever read.
+
+## Forming and Checking Expectations
+
+The move that turns staring into *analysis* is writing down what you expect **before** you look:
+
+- **Types:** `age` is a non-negative number under ~120; `municipality` is one of the 78 PR municipios.
+- **Ranges:** `pm2_5` is non-negative and rarely above a few hundred; a `proportion` lives in 0 to 1.
+- **Relationships:** heavier shipments cost more to send; older students have completed more credits.
+- **Category sets:** `sex` has the handful of values you expect, spelled and cased *one* way.
+
+Then you check, with cheap **sanity (sensibility) checks** before any fancy analysis:
+
+- **Impossible values** -- a negative age, a 200-year-old, a proportion of 1.4.
+- **Missing-value sentinels** -- real missingness is often hidden as `-999`, `9999`, `""`, `"N/A"`, or
+  `"unknown"` -- or even `0` *when zero is implausible for that column* (a zero birth-year, a zero price)
+  -- instead of an honest `NaN`. A sentinel is context-dependent, but once present it poisons every
+  average until you find it.
+- **Duplicates** -- the same row (or the same entity) counted twice.
+- **Type surprises** -- a numeric column read as text, dates stored as strings, the `$1,200` problem.
+
+::: {.callout-important title="A surprise is a finding, not a failure"}
+When the data matches your expectation, you have *confirmed* your mental model -- progress. When it does
+not, you have learned something: either your understanding was wrong (fix the expectation) or the data
+is wrong (fix or flag the data). **Explore-first beats model-first** precisely because these surprises
+are invisible to a model -- it will fit them as if they were real and report a number that hides the
+problem.
+:::
+
+## Quiz Hooks
+
+*The things to retain -- these feed the retrieval quiz on this lesson, given at the start of L08.*
+
+- The **goals of EDA** and where it sits in the process loop (clean <-> explore) 
+- **Classifying a variable** by type, and what each type lets you do (count? rank? average?) 
+- **Forming expectations then checking** them -- sanity checks and hidden missing-value sentinels 
+- **Why explore before modeling** -- what EDA catches that accuracy hides 
+
+## FAQ / Industry Reality
+
+**"Isn't EDA just making pretty plots?"** -- The plots are the *method*, not the product. Professional
+EDA ends in decisions: which variables are usable, which need cleaning, which hypotheses deserve a
+model. A figure nobody draws a conclusion from is decoration.
+
+**"Why not skip ahead to the model?"** -- Because the model will happily train on garbage. Missing
+values, skew, and the sentinels above do not announce themselves in the model's accuracy; they just
+quietly bias the result. An hour of EDA is the cheapest insurance in the pipeline -- and in practice it
+is where most real datasets reveal that the *question* itself needs changing.
+
+## Where to Go Deeper
+
+- **Book chapter:** [R for Data Science — Exploratory Data Analysis](https://r4ds.hadley.nz/eda) -- the same discipline, language-agnostic ideas (the code is R; the mindset is universal).
+- **Official docs:** [pandas — data types (`dtypes`)](https://pandas.pydata.org/docs/user_guide/basics.html#dtypes) · [pandas — categorical data](https://pandas.pydata.org/docs/user_guide/categorical.html) -- how the variable types above show up in a DataFrame.
+- **Classic reference:** Tukey, J. W. (1977). *Exploratory Data Analysis*. Addison-Wesley -- where the "look first" doctrine, and much of this vocabulary, comes from.
+
+> **Out of scope (deferred / not covered):** summary **statistics** (mean, median, variance, quantiles)
+> and **distribution plots** (histogram, KDE, box plot) are **L08**; the broader **visual catalogue**
+> (scatter, Pareto, parallel coordinates, star plots) is **L09**; the full applied EDA loop on a real
+> dataset is the **L10** mini-project; **correlation** between two variables is **L19** (Unit V). This
+> lesson installs the mindset; the next one puts numbers and pictures on one variable at a time.
