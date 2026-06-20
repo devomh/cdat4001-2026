@@ -1,0 +1,3 @@
+# MovieLens 100k: its license forbids redistribution.
+# The lab downloads it at run time; never commit or sync this data.
+data/

@@ -1,0 +1,196 @@
+---
+title: "Finding Groups & Outliers"
+unit: "V"
+lesson: "21"
+type: concept
+tags: [clustering, k-means, hierarchical, silhouette, outliers, unsupervised]
+difficulty: intermediate
+duration: "55 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Explain** clustering as *unsupervised* grouping — and how it differs from L14's supervised classifier — and **describe** how k-means assigns each point to its nearest centroid. *(Understand)*
+- **Choose** the number of clusters k using the elbow (inertia) and the silhouette score, and **justify** what to do when they disagree. *(Apply / Analyze)*
+- **Run** k-means, **visualize** the clusters on L20's PCA projection, and **compare** them to known labels. *(Apply)*
+- **Identify** outliers as points far from their centroid (an L18 distance) and **contrast** k-means with hierarchical clustering. *(Analyze)*
+
+> **Where this sits:** after **L20** projected many variables to 2D and you saw groups *by eye* · this lesson has an algorithm *find* the groups, with no labels · it closes **Unit V (Visualization)**; next, Unit VI opens recommender systems.
+
+> **Hands-on:** [Lab — Letting the Algorithm Find the Penguin Species](l21_lab_penguins_clustering.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u05_visualization/l21_lab_penguins_clustering.ipynb)
+
+## Why This Matters
+
+In L20, PCA flattened four penguin measurements into a 2D picture and three species clouds jumped out —
+but we *colored* them with species labels we already had. The common real situation has no labels: a
+marketing table of customers with no segments marked, a pile of documents with no topics assigned, a set
+of sensors with no "normal vs faulty" flag. **Clustering** finds the groups from the data alone.
+
+This lesson runs the standard method, **k-means**, on the same penguins with the species hidden, and
+watches it recover them — and then asks the two honest questions every clustering raises: *how many groups
+are really there?* and *which points belong to no group well* (the outliers).
+
+![Two side-by-side 2D scatter plots of penguins on the same principal-component axes. The left panel colors every point by the cluster k-means assigned with no labels; the right panel colors the same points by their true species. The two pictures match almost exactly: one tight group on the right (Gentoo) and two overlapping groups on the left (Adelie and Chinstrap).](assets/l21_clusters_vs_species.png)
+
+**Reading the output:** handed only four numbers per bird and no labels, k-means recovers the species
+**91.5%** of the time — the left picture (its clusters) and the right (the truth) are nearly the same. The
+8.5% it misses are exactly the Adelie/Chinstrap penguins that overlapped in L20. Clustering is the
+unsupervised mirror of L14's classifier: same goal of grouping, but learned without an answer key.
+
+## Supervised vs Unsupervised
+
+L14 built a **classifier**: it learned from *labeled* examples (penguins tagged with their species) and
+predicted the label of new ones. Clustering is **unsupervised** — there are *no labels at all*. It groups
+rows by similarity and leaves you to interpret what the groups mean. The two answer different questions:
+
+| | L14 classifier (supervised) | Clustering (unsupervised) |
+|---|---|---|
+| Input | features **+ labels** | features only |
+| Goal | predict the known label | discover unknown groups |
+| Checked by | accuracy on held-out labels | judgment + (if you have labels) agreement |
+
+We happen to *have* the species labels here, which lets us grade the clustering — a luxury you usually do
+not get, and exactly why we hide them first.
+
+## k-means
+
+The most common clustering method is **k-means**, and the algorithm is short:
+
+1. Pick **k** and drop k **centroids** at random.
+2. **Assign** each point to its *nearest* centroid — a distance, exactly L18's vector norm.
+3. **Move** each centroid to the mean of the points assigned to it.
+4. Repeat steps 2-3 until nothing moves.
+
+What it is quietly minimizing is the **inertia** — the total squared distance from every point to its own
+centroid (within-cluster spread). Smaller inertia means tighter groups. Two things to know up front: you
+must choose **k yourself** (the method will not tell you how many groups exist), and k-means assumes the
+clusters are roughly round and similar in size — it struggles with long, curved, or very uneven groups.
+
+::: {.callout-note title="Standardize first (again)"}
+k-means measures distance, so — like PCA in L20 — it is hijacked by the largest-unit column unless you
+**standardize** first (L11's `StandardScaler`). Body mass in grams would otherwise dominate every
+distance. Standardize, then cluster.
+:::
+
+## How Many Groups?
+
+Since you must supply k, two tools help you choose it:
+
+- **The elbow.** Plot inertia against k. It always falls as k grows (more centroids fit tighter), but the
+  *rate* of improvement drops off at a "knee" — past it, extra clusters buy little. For the penguins the
+  curve bends around **k = 3**.
+- **The silhouette score.** A number from -1 to +1 measuring how well-separated the clusters are (each
+  point compared to its own cluster vs the nearest other). Higher is cleaner.
+
+![Two line charts. The left plots inertia against k from 1 to 6: it drops steeply from k=1 to k=3, then flattens, making an elbow around k=3. The right plots the silhouette score against k from 2 to 6: it is highest at k=2 (about 0.53) and declines steadily after, with a dashed line marking k=2.](assets/l21_choosing_k.png)
+
+**Reading the output:** here the two guides **disagree** — the elbow suggests 3, but the silhouette is
+highest at **k = 2**. Both are right about what they measure: k = 2 cleanly splits the big Gentoo from
+everyone else (the single most obvious divide), while k = 3 matches the biology (Adelie and Chinstrap
+overlap, so splitting them lowers the silhouette). The lesson: **k is a judgment, not an output.** The
+metrics are guides; the right k depends on what you will *do* with the groups, and domain knowledge
+(three species) breaks the tie here.
+
+## Seeing the Clusters
+
+Clustering pairs naturally with L20's projection: run k-means on the data, then **color the PCA scatter by
+the cluster label** — using the 2D picture as the place to *see* groups an algorithm found. That is the
+left panel of this lesson's opening figure. Comparing it to the true-species panel (a **crosstab** of
+cluster vs species does the same numerically) is how you sanity-check a clustering when you are lucky
+enough to have labels: 123 Gentoo land alone in one cluster, while the Adelie/Chinstrap overlap splits
+imperfectly — the 91.5% story, made of real penguins.
+
+## Outliers and Anomalies
+
+The same distances that build the clusters also flag the **outliers**: a point's distance to *its own*
+centroid says how typical it is. The points farthest from any center are the anomalies — the data an
+analyst should always inspect before trusting a model.
+
+```python
+dist = np.linalg.norm(X - km.cluster_centers_[km.labels_], axis=1)   # L18 distance to own centroid
+```
+
+For the penguins the most extreme is a Gentoo from Biscoe at distance 2.88 — the same giant bird
+(59.6 mm bill, 6050 g) L20's projection flagged in the corner. An outlier is not automatically an error;
+it is a question: a real rare case, or a data-entry slip? Distance only tells you *where* to look.
+
+## Another Way: Hierarchical Clustering
+
+k-means needs k up front and starts over for each k. **Hierarchical** (agglomerative) clustering instead
+builds a tree: start with every point its own cluster, repeatedly merge the two nearest, and record the
+whole sequence as a **dendrogram**. You then *cut* the tree at whatever height gives the number of groups
+you want — no k chosen in advance.
+
+![A dendrogram: an upside-down tree where penguins merge into larger and larger groups from the bottom up, with the vertical axis showing the distance at which each merge happens. A dashed horizontal line cuts across near the top, slicing the tree into three branches.](assets/l21_dendrogram.png)
+
+**Reading the output:** cutting this tree into three groups recovers the species **96.8%** of the time —
+a different algorithm, the same biology, slightly cleaner here. Prefer hierarchical when you do not want to
+commit to k in advance or when the *nested* structure matters (sub-groups within groups); prefer k-means
+when the data is large (it is faster) and you have a k in mind.
+
+## When to Use Which
+
+- **k-means** — large data, roughly round groups, a k you can justify. Fast and simple.
+- **Hierarchical** — you want to see structure at many granularities, or cannot pick k up front. The
+  dendrogram is the payoff; it is slower on big data.
+- **Just look at the PCA projection (L20)** — sometimes the groups are obvious by eye and you do not need
+  an algorithm to assign them. Cluster when you need the *assignment* (which row in which group), not just
+  the picture.
+
+## Common Pitfalls
+
+- **Clustering always returns clusters.** Even pure noise gets partitioned into k tidy groups. The
+  algorithm never says "there are no groups here" — *you* must check that the clusters are real (separated,
+  stable, interpretable), not an artifact of forcing k.
+- **Forgetting to standardize.** Distances are unit-sensitive; the biggest-unit column dominates. Scale
+  first, exactly as for PCA.
+- **Treating k as an answer.** The elbow and silhouette are guides that often disagree; report the k you
+  chose *and why*, not "the algorithm picked it."
+- **Calling every outlier an error.** A far-from-centroid point is a flag to investigate, not a row to
+  delete on sight.
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Distinguish clustering from L14's classifier (no labels; groups by similarity) and pick how k-means assigns a point (to the nearest centroid by distance) 
+- Given an elbow plot and silhouette scores that disagree, pick the correct interpretation and what to do (k is a judgment; use domain knowledge) 
+- Given a cluster-vs-species crosstab, read the agreement and identify which groups were recovered cleanly vs which overlapped 
+- Pick how an outlier is flagged (distance to its centroid) and one correct contrast between k-means and hierarchical clustering 
+
+## FAQ / Industry Reality
+
+**"Are the clusters real?"** — Clustering cannot tell you. Hand it random noise and it returns k neat
+groups all the same. Validation is your job: do the clusters separate cleanly (silhouette), survive a
+re-run or a resample, and *mean* something a domain expert recognizes? A cluster you cannot name is a
+hypothesis, not a finding.
+
+**"Is this the same as L14's classifier?"** — No, and the difference is the whole point. The classifier
+needed labeled training data and predicts a *known* category. Clustering has no labels and proposes
+*unknown* groups. They are sometimes combined — cluster first to discover segments, then train a classifier
+to assign new rows — but they answer different questions.
+
+**"How do I pick k?"** — There is no formula. Use the elbow and silhouette as guides, lean on domain
+knowledge (we knew there were three species), and consider what the groups are *for*: a marketing team
+that can run three campaigns wants k = 3 regardless of what the silhouette prefers. Report your reasoning.
+
+## Cheat-sheet
+
+| Task | Call |
+|---|---|
+| Standardize first | `StandardScaler().fit_transform(X)` |
+| Cluster into k groups | `KMeans(n_clusters=k, random_state=0, n_init=10).fit(X)` |
+| Within-cluster spread | `km.inertia_` (the elbow) |
+| Cluster separation | `silhouette_score(X, km.labels_)` |
+| Distance to own centroid (outliers) | `np.linalg.norm(X - km.cluster_centers_[km.labels_], axis=1)` |
+| Compare to known labels | `pd.crosstab(km.labels_, true_labels)` |
+| Hierarchical tree | `scipy.cluster.hierarchy.linkage(X, "ward")` + `dendrogram` |
+
+## Where to Go Deeper
+
+- **Official docs:** [scikit-learn — Clustering](https://scikit-learn.org/stable/modules/clustering.html) — k-means, hierarchical, DBSCAN, and a side-by-side of when each shines.
+- **Textbook:** J. VanderPlas, *Python Data Science Handbook* — "In Depth: k-Means Clustering" — the algorithm, its failure modes, and choosing k, with worked code.
+- **One step further:** [scikit-learn — Novelty and Outlier Detection](https://scikit-learn.org/stable/modules/outlier_detection.html) — dedicated anomaly methods (isolation forest, local outlier factor) for when distance-to-centroid is not enough.

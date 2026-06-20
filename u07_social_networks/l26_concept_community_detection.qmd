@@ -1,0 +1,182 @@
+---
+title: "Community Detection in Networks"
+unit: "VII"
+lesson: "26"
+type: concept
+tags: [community-detection, modularity, louvain, graph-partitioning, networkx, nmi]
+difficulty: intermediate
+duration: "40 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Define** a **community** in a network and **explain** **modularity** as a score for how community-like a grouping is. *(Understand)*
+- **Apply** community detection (the **Louvain** method and greedy modularity) in NetworkX and **read** the number of communities found and the modularity achieved. *(Apply)*
+- **Compare** a detected grouping to a **ground-truth** labelling with **normalized mutual information (NMI)**, and **explain** why detection can find more groups than the truth. *(Analyze)*
+- **Distinguish** community detection from **graph partitioning** (balanced, minimum edge-cut) and say when each is the right tool. *(Analyze / Evaluate)*
+
+> **Where this sits:** **L25** built the graph and measured *one node at a time* (degree, centrality, neighbourhood) · this lesson asks the **global** question -- do the nodes fall into **communities**? · it is **L21**'s "find the groups" idea, now on a *graph* instead of a point cloud · it **closes Unit VII**.
+
+> **Hands-on:** [Lab — Community Detection on the Karate Club](l26_lab_community_detection.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u07_social_networks/l26_lab_community_detection.ipynb)
+
+## Why This Matters
+
+L25 ended on a cliff-hanger. In the early 1970s the karate club Wayne Zachary was studying **split in
+two**: after the instructor (Mr. Hi) and the president (the Officer) fell out, every member followed one
+or the other, and the club fissioned into two. Zachary's question was whether the *friendship structure
+alone* -- who was friends with whom, recorded before the split -- could have predicted who went where.
+
+We now have the tools to answer him. An algorithm that knows nothing about the conflict, only the graph,
+can look for **communities**: groups of members densely connected to each other and sparsely connected to
+everyone else. This is exactly the "find the groups" instinct from **L21** -- but where L21 grouped
+*points* by distance, here we group *nodes* by connection. Community detection is everywhere relationships
+are: friend circles in a social graph, topic clusters in a citation network, functional modules in a
+protein-interaction network, market segments in a co-purchase graph. And the punchline for the karate
+club is striking -- from the graph alone, the real split comes back almost exactly.
+
+## What Is a Community?
+
+A **community** is a set of nodes with **many edges inside the group and few edges leaving it**. That is
+the whole intuition: dense within, sparse between. The trouble is that "dense within, sparse between" is a
+matter of degree, not a yes/no -- so we need a *score* that says how good a proposed grouping is.
+
+## Measuring a Grouping: Modularity
+
+**Modularity**, written \(Q\), scores a partition of the nodes by comparing the edges that fall *inside*
+the groups to how many would fall inside **by random chance**, given each node's degree. Roughly:
+
+$$Q = (\text{fraction of edges inside groups}) - (\text{fraction expected inside if edges were placed at random}).$$
+
+- \(Q\) near **0** means the grouping is no better than random -- no real community structure.
+- Higher \(Q\) (real networks top out around **0.3 to 0.7**) means edges concentrate inside the groups far
+  more than chance would predict -- strong communities.
+
+Modularity turns "are these good communities?" into a number you can maximize. The karate club's **real
+two-faction split** scores \(Q = 0.391\) -- solidly community-like, confirming the friendships really did
+cluster around the two leaders.
+
+## Finding Communities
+
+We do not need the ground truth to find communities -- that is the point. We hand the graph to an
+algorithm that searches for the grouping with the **highest modularity**:
+
+- **The Louvain method** -- the standard, fast approach: it greedily moves nodes between groups and merges
+  groups to push \(Q\) up, and it **chooses the number of communities itself** (you do not tell it how
+  many). `nx.community.louvain_communities(G)`.
+- **Greedy modularity** -- a related agglomerative method, fully deterministic:
+  `nx.community.greedy_modularity_communities(G)`.
+
+Run Louvain on the karate club and something instructive happens: it finds **four** communities, with
+**\(Q = 0.427\)** -- *higher* than the real two-way split's 0.391.
+
+![Two node-link diagrams of the karate club side by side, using the same layout. Left: nodes coloured by the two real factions (Mr. Hi's group and the Officer's group), modularity Q = 0.391. Right: nodes coloured by the four communities the Louvain method finds, modularity Q = 0.427; each real faction is split into roughly two finer groups, so the four detected communities largely follow the real split while carving it more finely, with one boundary member (node 8) sitting with the other faction's community -- foreshadowing the handful of crossovers measured later.](assets/l26_communities_vs_truth.png)
+
+Why four and not two? Because **maximizing modularity rewards finer structure**: splitting a faction into
+two tightly-knit sub-cliques can raise \(Q\) further. The algorithm is not "wrong" -- it found a
+higher-scoring grouping than the social split. It simply optimizes density, and the densest grouping here
+is more granular than the two real camps. (Tuning this granularity is the **resolution** question; named
+here, not pursued.)
+
+## Did It Get It Right? Ground Truth and NMI
+
+When you *do* have a ground-truth labelling (here, the real faction each member joined), you can measure
+how well a detected grouping agrees with it. The standard score is **normalized mutual information
+(NMI)** -- built on the **mutual information** you met in L13 (shared information between two labelings),
+normalized to run from **0** (no agreement) to **1** (identical grouping).
+
+- Louvain's four communities vs the two real factions: **NMI = 0.594** -- a moderate match. It recovered
+  the factions but then subdivided them, which costs agreement.
+- Ask instead for **exactly two** communities (`greedy_modularity_communities(G, cutoff=2, best_n=2)`):
+  **NMI = 0.677**, and only **2 of the 34** members fall on the wrong side of the real split.
+
+That second result is Zachary's answer: **the friendship structure alone nearly predicts the fission** --
+two mistakes out of thirty-four, with no knowledge of the conflict.
+
+## A Different Goal: Graph Partitioning
+
+Community detection asks "where are the natural dense groups?" -- and lets the groups be any size. A
+related but distinct task, **graph partitioning**, asks something else: split the nodes into a *fixed
+number of balanced parts* while cutting **as few edges as possible** (the **edge-cut**). The
+**Kernighan-Lin** heuristic does this for two parts: `nx.community.kernighan_lin_bisection(G)`.
+
+On the karate club it produces two parts of **17 and 17** with an edge-cut of **10** -- here it happens to
+match the social split too. But the *purpose* is different, and so is the constraint:
+
+| | Community detection | Graph partitioning |
+|---|---|---|
+| **Goal** | maximize internal density (modularity) | minimize edges cut between parts |
+| **Group sizes** | vary freely (4, 6, 10, 14 ...) | forced balanced (17, 17) |
+| **Number of groups** | chosen by the algorithm | fixed by you (k) |
+| **Typical use** | find natural social / topical groups | shard a graph across machines; load-balance |
+
+Use **partitioning** when you must spread a huge graph evenly across servers with the fewest cross-machine
+links. Use **community detection** when you want the *natural* groups, whatever their sizes.
+
+## NetworkX in One Page
+
+| Task | NetworkX |
+|------|----------|
+| Modularity of a grouping | `nx.community.modularity(G, groups)` |
+| Detect communities (Louvain) | `nx.community.louvain_communities(G, seed=...)` |
+| Detect communities (greedy) | `nx.community.greedy_modularity_communities(G)` |
+| Ask for exactly k groups | `greedy_modularity_communities(G, cutoff=k, best_n=k)` |
+| Balanced 2-way partition | `nx.community.kernighan_lin_bisection(G, seed=...)` |
+| Agreement with ground truth | `sklearn.metrics.normalized_mutual_info_score(truth, found)` |
+
+> **Unit VII complete.** L25 turned relationships into a graph and measured local structure; L26 found the
+> global structure -- the communities -- and recovered a real social split from the graph alone.
+> Overlapping communities, dynamic (time-evolving) communities, and other detection methods (label
+> propagation, edge-betweenness) are where this goes next; named here, not pursued.
+
+## Quiz Hooks
+
+- What a community is (dense inside, sparse between) and what modularity \(Q\) measures. *(Understand, MC)* 
+- Reading modularity: a higher \(Q\) means a more community-like grouping; \(Q\) near 0 means no structure. *(Understand, MC)* 
+- What community detection does: Louvain maximizes modularity and chooses the number of communities itself. *(Understand / Apply, MC)* 
+- Why detection can find more communities than the ground truth has groups (modularity rewards finer structure). *(Analyze, MC)* 
+- What NMI measures and how to read it (0 = no agreement, 1 = identical), as the check against ground truth. *(Understand / Analyze, MC)* 
+- Community detection vs graph partitioning: which is balanced + min-cut, which is density-driven + variable size, and when to use each. *(Analyze / Evaluate, MC)* 
+
+## FAQ
+
+**There are two real factions -- why does Louvain find four communities?**
+Because Louvain maximizes **modularity**, and subdividing each faction into two tighter sub-groups scores
+*higher* than the two-way split. It is optimizing density, not trying to match the social split. Ask it for
+exactly two groups and it recovers the factions almost exactly.
+
+**Is a higher modularity always a better answer?**
+Higher \(Q\) means denser-inside groups, but not necessarily the grouping *you* want. The four-community
+solution has higher \(Q\) than the real two-faction split, yet the two-faction grouping is the one that
+matches reality. Modularity is a useful objective, not the final word -- match it to your goal.
+
+**Community detection or graph partitioning -- how do I choose?**
+If you need the **natural** groups and do not care about their sizes, detect communities. If you must
+split the graph into a **fixed number of balanced parts with the fewest crossing edges** (for example, to
+shard a database across servers), partition it.
+
+**Does NMI need labels for every node?**
+It compares two labelings over the same nodes -- here the detected community id and the true faction for
+each member. It needs both labels present; it does not need them to *use the same names* (NMI matches
+groups up by overlap, not by id).
+
+## Cheat-sheet
+
+| You want... | Do this |
+|-------------|---------|
+| Score a grouping | `nx.community.modularity(G, list_of_sets)` |
+| Find communities, auto count | `nx.community.louvain_communities(G, seed=42)` |
+| Find communities, deterministic | `nx.community.greedy_modularity_communities(G)` |
+| Force exactly k communities | `greedy_modularity_communities(G, cutoff=k, best_n=k)` |
+| Balanced halves, fewest cut edges | `nx.community.kernighan_lin_bisection(G, seed=42)` |
+| Compare to ground truth | `normalized_mutual_info_score(true_labels, found_labels)` |
+
+## Where to Go Deeper
+
+- **NetworkX community documentation** -- the `networkx.algorithms.community` reference.
+- **Santo Fortunato, "Community detection in graphs" (2010)** -- the comprehensive survey (start with the
+  modularity sections).
+- **Barabasi, *Network Science* (free online), Chapter 9** -- communities, modularity, and the Louvain
+  method, with the resolution limit explained.

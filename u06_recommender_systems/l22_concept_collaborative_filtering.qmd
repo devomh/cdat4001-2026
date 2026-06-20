@@ -1,0 +1,211 @@
+---
+title: "Recommender Systems & Collaborative Filtering"
+unit: "VI"
+lesson: "22"
+type: concept
+tags: [recommender-systems, collaborative-filtering, cosine-similarity, matrix-factorization]
+difficulty: intermediate
+duration: "35 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Define** what a recommender system does (the user-item-rating framing), **give** notable examples, and **distinguish** explicit from implicit feedback. *(Understand)*
+- **Distinguish** the family of recommender approaches — collaborative, content-based, demographic, knowledge-based, and hybrid — at the overview level. *(Understand)*
+- **Build** user-user and item-item collaborative filtering from scratch with cosine similarity, and **generate** top-N recommendations. *(Apply)*
+- **Explain** matrix factorization as a latent-factor model and **relate** it to L18's matrix product and L20's PCA. *(Understand / Apply)*
+- **Identify** the cold-start problem as the wall collaborative filtering hits. *(Understand)*
+
+> **Where this sits:** **L21** closed Unit V by letting an algorithm *find* groups in data · this lesson opens **Unit VI**, a case study on recommender systems, and **builds** one from scratch · **L23** adds the other approaches and shows how to *evaluate* recommendations · **L24** is the mini-project.
+
+> **Hands-on:** [Lab — Building a Movie Recommender with Collaborative Filtering](l22_lab_collaborative_filtering.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u06_recommender_systems/l22_lab_collaborative_filtering.ipynb)
+
+## Why This Matters
+
+In 2006 Netflix offered **\$1,000,000** to anyone who could beat its in-house recommender,
+Cinematch, by 10% — measured on a hundred million movie ratings. The contest ran three years, drew
+thousands of teams, and popularized a whole family of algorithms. That is how much a *better
+suggestion* is worth.
+
+It is not just Netflix. The "For You" feed on TikTok, "Discover Weekly" on Spotify, "Customers who
+bought this..." on Amazon, the next video on YouTube — each is a recommender deciding, out of
+millions of options, the handful you actually see. Recommendation is one of the highest-leverage
+applications of data science in industry, and the surprising part is how far you get with tools you
+already have: the **dot product** and **cosine similarity** from L18, the **mean-centered cosine**
+that was Pearson's $r$ in L19, and the **latent-factor** view of PCA from L20.
+
+## The Core Idea
+
+A recommender estimates how much a **user** would like an **item** they have not seen. Given users
+$U$ and items $I$, we want a function
+
+$$f : U \times I \rightarrow \mathbb{R}$$
+
+that scores every (user, item) pair, so we can rank the unseen items and show the top few. All we
+start with is the **user-item matrix** $R$, where $R_{ui}$ is the rating user $u$ gave item $i$ — and
+almost all of it is missing, because nobody rates more than a sliver of everything.
+
+![A 60-by-80 corner of the MovieLens user-item matrix drawn as a grid. Dark-blue cells mark the few user-movie pairs that have a rating; the overwhelming majority are pale (unrated). A few columns and rows are noticeably denser, marking popular movies and very active users. The full matrix is 943 by 1682 and 93.7 percent empty.](assets/l22_sparsity.png)
+
+That emptiness — **sparsity** — is the central challenge. Recommendation is the art of filling in a
+mostly blank matrix from its few known entries.
+
+## Two Kinds of Signal: Explicit vs. Implicit Feedback
+
+Where do the entries come from?
+
+- **Explicit feedback** — the user deliberately rates: 5 stars, a thumbs-up, a like. Honest and
+  clear, but rare; most people never rate anything.
+- **Implicit feedback** — behavior the system observes: clicks, watch time, purchases, skips,
+  re-watches. Abundant but noisy (a click is not love; a long watch might be background noise).
+
+Most real systems run mostly on implicit feedback, simply because there is so much more of it.
+
+## The Family of Approaches
+
+There is no single "recommender algorithm." There is a family, each leaning on a different kind of
+information. This lesson builds the first row; **L23 takes up the rest** (content, knowledge,
+demographic, hybrid) and how to choose between them.
+
+| Approach | Core idea | Needs | New-user cold start |
+|----------|-----------|-------|---------------------|
+| **Collaborative filtering** *(this lesson)* | "People (or items) similar to this one..." | a ratings matrix | **fails** — no ratings yet |
+| **Content-based** *(L23)* | "More items like the ones you liked" | item features (e.g. genres) | needs a few likes first |
+| **Demographic** *(L23)* | "People in your group liked..." | user attributes (age, region) | **works** — no ratings needed |
+| **Knowledge-based** *(L23)* | "You said you want X, Y, Z" | explicit rules / user input | **works** — asks directly |
+| **Hybrid** *(L23)* | combine several of the above | mix | depends on the mix |
+
+## Collaborative Filtering
+
+**Collaborative filtering** is the workhorse, and the one you build in the lab. It ignores *what* an
+item is and looks only at the pattern of ratings: find users who rated movies the way you did, then
+recommend what they liked. "Rated the way you did" is measured with **cosine similarity** between two
+rating vectors $a$ and $b$ — the very operation from L18:
+
+$$\cos(a, b) = \frac{a \cdot b}{\lVert a \rVert \, \lVert b \rVert}$$
+
+One refinement matters. Before comparing, we **mean-center** each user (subtract their average), so a
+generous 5-everything rater and a stingy 3-everything rater can still look similar — they agree on
+*shape*, not absolute level. Mean-centering and then taking the cosine is exactly the **Pearson
+correlation** $r$ you built in L19: collaborative filtering is correlation between rating vectors.
+
+It comes in two flavors:
+
+- **User-user** — "users like you also enjoyed...". Find the user's nearest neighbors, then score
+  each unseen movie by the neighbors' similarity-weighted ratings.
+- **Item-item** — "because you liked this movie...". Compute similarity between *movies* (across the
+  rating columns); recommend movies close to the ones the user already liked. Item-item is usually
+  steadier — a movie's rating pattern changes far more slowly than a person's taste — and it is what
+  Amazon's classic "customers who bought..." shipped.
+
+A caution you will see in the lab: a movie rated by only a handful of people can show a *spuriously*
+high similarity to anything by chance. Real systems require a **minimum number of ratings** before
+trusting a similarity — a standard guard against those flukes.
+
+## The Cold-Start Problem
+
+::: {.callout-important title="Cold start: the new-user, new-item wall"}
+Collaborative filtering needs a *history* to work — so it is helpless for a **brand-new user** (no
+ratings to find neighbors from) and a **brand-new item** (no one has rated it yet). This is the
+**cold-start problem**, and it is the hard limit of everything in this lesson. The fixes lean on
+approaches that do *not* need a rating history — demographic and knowledge-based for new users,
+content-based for new items. **That is exactly what L23 is about.**
+:::
+
+## Matrix Factorization: the Same Latent Space as PCA
+
+Comparing whole rating vectors works, but it is shallow. The idea that won the Netflix Prize goes
+deeper: assume a handful of **latent factors** — hidden "taste" dimensions like *action vs. romance*
+or *blockbuster vs. arthouse* — explain the ratings. Each user gets a short vector $p_u$ (how much
+they want each factor); each movie gets a short vector $q_i$ (how much it has each factor); and the
+predicted rating is their **dot product**:
+
+$$\hat{R}_{ui} \approx p_u^\top q_i, \qquad R \approx P\,Q^\top$$
+
+That second form should look familiar. In **L18** the motivating example for **matrix times matrix**
+was *"a users-by-factors table times a factors-by-movies table gives predicted ratings"* — this is
+that example, now real. And the *idea* is **L20's PCA**: there, PCA embedded penguins into a 2D space
+where each axis was a learned combination of measurements. Here we embed *users and movies* into a
+shared $K$-dimensional taste space, and a movie's coordinates are exactly the kind of "loadings" you
+read off a PCA.
+
+![Three small heatmaps side by side. The first, P, is a tall four-users-by-two-factors table (factors labeled action and romance). The second, Q-transpose, is a two-factors-by-five-movies table. The third, their matrix product P times Q-transpose, is a four-users-by-five-movies table of predicted match scores: the action fan scores highest on Die Hard, the romance fan highest on the Notebook (with the rom-com next), and the user who likes both scores highest on a movie that has both factors.](assets/l22_mf_factors.png)
+
+The one difference from PCA: the ratings matrix is mostly empty, so we cannot run plain PCA on it. We
+**learn** $P$ and $Q$ by gradient descent on the observed ratings only — the lab does this from
+scratch, in about twenty lines.
+
+## What's Next: Does It Actually Work?
+
+You will *generate* recommendations in the lab — personalized top-N lists, similar-movie lists, a
+factorized prediction matrix. They will look plausible. But "looks plausible" is not a measurement.
+**How do we know a recommender is any good?** Hide some ratings, predict them, and score the error
+(RMSE/MAE) — and beyond predicting ratings, how well does the *ranking* match what users actually
+want? That is **L23**: the other approaches *and* how to evaluate all of them, including the famous
+ladder where each idea beats the last.
+
+## FAQ / Industry Reality
+
+**"Why not just recommend the most popular items?"** Popularity is a fine *baseline* and a reasonable
+cold-start default, but it is identical for everyone — no personalization — and it buries the long
+tail of niche items that make a catalog valuable. The whole point of a recommender is to beat "most
+popular."
+
+**"Is this machine learning?"** Yes — matrix factorization is a model fit by gradient descent, and
+modern systems stack deep networks on top. But notice you get most of the way with similarity and
+averages. Sophistication is earned, not assumed.
+
+**"Does more data just solve it?"** It helps, but the hard parts — cold start, implicit-feedback
+noise, fairness, and the feedback loop where recommendations shape the very behavior you learn from —
+are not fixed by volume alone.
+
+## Ethics & Privacy
+
+Recommenders are powerful enough to be dangerous. The Netflix Prize dataset was "anonymized," yet
+researchers re-identified users by cross-referencing public movie reviews — a landmark privacy
+lesson. Beyond privacy, recommenders can trap people in **filter bubbles**, amplify outrage because
+it maximizes watch time, and quietly encode bias from who rated what. These are not side issues;
+**Unit VIII** takes up data governance and ethics directly.
+
+## Key Takeaways
+
+- A recommender estimates $f : U \times I \rightarrow \mathbb{R}$ from a **sparse** user-item matrix;
+  sparsity is the core challenge.
+- The approach **family**: collaborative (this lesson), content-based, demographic, knowledge-based,
+  hybrid (L23) — each leans on different information.
+- **Collaborative filtering** turns the crowd into personalization via **cosine similarity** on
+  mean-centered ratings — which is L19's Pearson $r$ between rating vectors; it comes user-user and
+  item-item.
+- **Cold start** breaks collaborative filtering for new users and items — the bridge to L23.
+- **Matrix factorization** learns latent user/item vectors: L18's matrix product and L20's PCA idea,
+  applied to recommendation — and it is what the Netflix Prize crowned.
+
+## Cheat-sheet
+
+| Task | Idea |
+|---|---|
+| Build the ratings matrix | `ratings.pivot(index="user", columns="item", values="rating")`, then `.reindex` to the full user/item range |
+| Mean-center a user | subtract that user's average over rated movies |
+| User/item similarity | cosine of the mean-centered vectors (= L19 Pearson $r$) |
+| Score an unseen movie | neighbors' similarity-weighted (centered) ratings, add the user mean back |
+| Latent-factor prediction | $\hat{R} = P\,Q^\top$ (L18 matrix product; learn $P,Q$ by gradient descent) |
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Classify a feedback signal as explicit or implicit (e.g. "minutes watched" vs "a thumbs-up") 
+- Match a recommender approach (collaborative / content / demographic / knowledge-based) to the information it needs or a one-line description 
+- Identify the mechanism of collaborative filtering: why we mean-center before the cosine (= L19 Pearson r), or what the neighbor weights represent 
+- Diagnose a cold-start scenario and pick the family that addresses it 
+- Identify what matrix factorization's $p_u$ and $q_i$ are — the L18 matrix-product / L20 latent-factor idea (not "PC1 is the best movie", not clustering) 
+
+## Where to Go Deeper
+
+- **Official docs:** [scikit-learn — Nearest Neighbors](https://scikit-learn.org/stable/modules/neighbors.html) — the general machinery behind neighborhood methods.
+- **Dataset:** F. M. Harper & J. A. Konstan (2015). *The MovieLens Datasets: History and Context.* ACM TiiS. (The data used in the lab; research/educational use, not redistributed.)
+- **The Netflix-Prize reference:** Y. Koren, R. Bell & C. Volinsky (2009). *Matrix Factorization Techniques for Recommender Systems.* IEEE Computer.
+- **The privacy lesson:** A. Narayanan & V. Shmatikov (2008). *Robust De-anonymization of Large Sparse Datasets.* IEEE S&P. (The Netflix Prize re-identification.)

@@ -1,0 +1,209 @@
+---
+title: "Social Networks as Graphs"
+unit: "VII"
+lesson: "25"
+type: concept
+tags: [graphs, networks, networkx, adjacency-matrix, centrality, ego-network]
+difficulty: intermediate
+duration: "40 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Represent** relationships as a **graph** (nodes and edges; directed vs. undirected, weighted vs. unweighted) and **build and inspect** one in NetworkX. *(Understand / Apply)*
+- **Connect** a graph to its **adjacency matrix** and **use** the L18 matrix operations on it — row sums give degree, and `A @ A` counts common neighbours. *(Apply / Analyze)*
+- **Compute and interpret** **degree** and **centrality** (degree, betweenness, closeness) to find the important nodes — and explain why the three measures can disagree. *(Apply / Analyze)*
+- **Extract** a node's **ego network** and **read** local structure (neighbours, clustering, components, distances). *(Apply)*
+
+> **Where this sits:** **Unit VI** asked "who is similar to whom?" from a ratings *table* · this lesson opens **Unit VII**, where the data *is* the relationships, so the right object is a **graph** · it cashes in **L18**'s promise that the adjacency matrix is "just a matrix" · **L26** takes the same graph and finds its *communities*.
+
+> **Hands-on:** [Lab — Social Networks as Graphs with NetworkX](l25_lab_social_networks_graphs.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u07_social_networks/l25_lab_social_networks_graphs.ipynb)
+
+## Why This Matters
+
+Almost everything you have analysed so far arrived as a **table**: one row per observation, one column
+per feature. But some of the most interesting data is not about the *things* — it is about the
+**connections between them**. Who follows whom on a social platform. Which papers cite which. Which
+proteins interact. Which airports have direct flights. Flatten any of these into a table and you throw
+away the very thing you wanted to study: the **structure of the relationships**.
+
+The right object is a **graph** (also called a **network**): a set of **nodes** (the things) joined by
+**edges** (the connections). Once your data is a graph, a whole toolbox opens up — you can ask who is
+*central*, which nodes are *bridges*, how *tight-knit* a neighbourhood is, and (next lesson) which nodes
+form *communities*. And the engine underneath is one you already built: in **L18** you learned that a
+table is a matrix; a graph, it turns out, is **also** a matrix — its **adjacency matrix** — and the same
+dot products and matrix products you drilled there now answer questions about who-knows-whom.
+
+The running example is the most famous small network in data science.
+
+> **Zachary's Karate Club.** In the early 1970s the sociologist Wayne Zachary recorded the friendships
+> among 34 members of a university karate club. Then the club's instructor ("Mr. Hi") and its president
+> ("the Officer") fell out, and the club **split in two** — each member following one leader or the
+> other. Zachary's question: could the *friendship structure alone* have predicted the split? The graph
+> ships inside NetworkX (`nx.karate_club_graph()`), so we never download anything. This lesson measures
+> the graph; **L26** lets an algorithm find the two factions and checks how close it gets.
+
+## What Is a Graph?
+
+A graph is a pair of sets: the **nodes** (or *vertices*) and the **edges** (or *links*) joining pairs of
+them. That is the whole definition — everything else is vocabulary for talking about structure.
+
+| Term | Meaning |
+|------|---------|
+| **Node** (vertex) | A thing: a person, a paper, an airport. |
+| **Edge** (link) | A connection between two nodes. |
+| **Neighbours** of a node | The nodes it shares an edge with. |
+| **Degree** of a node | How many edges it has — its number of neighbours. |
+| **Path** | A sequence of edges from one node to another. |
+| **Shortest path** | The fewest-edge route between two nodes. |
+| **Connected component** | A group of nodes you can reach from each other by some path. |
+| **Density** | The fraction of all *possible* edges that actually exist. |
+
+Two choices fix the *kind* of graph:
+
+- **Directed vs. undirected.** In an **undirected** graph an edge `{u, v}` is mutual — friendship on
+  Facebook, a shared flight route. In a **directed** graph edges point one way — "follows" on X, a
+  citation, a one-way street. Karate-club friendship is undirected.
+- **Weighted vs. unweighted.** An **unweighted** edge just says *connected or not*. A **weighted** edge
+  carries a number — strength, distance, number of interactions. The built-in karate club actually
+  stores interaction-count weights on its edges; when we only care about *who is tied to whom* we drop
+  the weights and use the **binary** view (edge present = 1, absent = 0).
+
+## A Graph Is a Matrix
+
+Here is the bridge back to **L18**. Number the nodes `0, 1, ..., n-1` and build an `n x n` table `A`
+where
+
+$$A_{ij} = \begin{cases} 1 & \text{if nodes } i \text{ and } j \text{ are connected} \\ 0 & \text{otherwise.} \end{cases}$$
+
+That table is the **adjacency matrix**. For an undirected graph it is **symmetric** ($A = A^{T}$,
+because if `i` is tied to `j` then `j` is tied to `i`). The same network, drawn as a picture and written
+as a matrix, is the same object two ways:
+
+![Left: Zachary's Karate Club drawn as a node-link diagram, with each node sized by its degree and the two leaders (Mr. Hi and the Officer) marked in red as the largest hubs. Right: the same network as a 34 by 34 binary adjacency matrix heatmap; filled cells mark friendships and the matrix is symmetric about the diagonal, with two visibly denser blocks foreshadowing the club's two factions. The caption notes that A[i, j] = 1 when i and j are friends and that each row sum equals that node's degree.](assets/l25_network_and_matrix.png)
+
+And now the L18 operations *mean something*:
+
+- **Row sum = degree.** Add up row `i` of `A` and you count node `i`'s edges. Summing every row at once
+  is `A @ ones` — the **matrix-times-vector** product from L18. The adjacency matrix already knows every
+  node's degree.
+- **`A @ A` counts common neighbours.** The **matrix-times-matrix** product from L18, applied to `A`,
+  gives a table whose `(i, j)` entry is the number of length-2 paths from `i` to `j` — that is, how many
+  **friends `i` and `j` share**. On the diagonal, `(A @ A)[i, i]` is just node `i`'s degree again.
+
+This is exactly what L18 meant by "Unit VII: the adjacency matrix." The graph is not a new kind of math
+— it is linear algebra wearing a different hat.
+
+## Who Is Important? Centrality
+
+A natural question about any network is *which nodes matter most*. There is no single answer, because
+"important" can mean different things — so there are several **centrality** measures, each capturing a
+different intuition:
+
+- **Degree centrality** — *how many* connections a node has (its degree, scaled to `[0, 1]`). The
+  "social butterfly": lots of direct ties.
+- **Betweenness centrality** — how often a node sits **on the shortest path** between other pairs. The
+  **broker** or **bridge**: remove it and parts of the network drift apart. A node can have modest
+  degree but high betweenness if it is the only link between two groups.
+- **Closeness centrality** — how **near** a node is to everyone else, on average (short distances to all
+  others). The well-positioned node that can reach the whole network quickly.
+
+The instructive part is that **these can disagree**. In the karate club the Officer has the *most ties*
+(top degree), but Mr. Hi is the best *bridge* (top betweenness) and the most central by distance (top
+closeness). If you only ranked by degree you would miss that Mr. Hi is the structural linchpin. Choosing
+the right centrality is a modelling decision, not a default. (Two more — **PageRank** and **eigenvector
+centrality**, which weight a node by the importance of *its* neighbours — are where this goes next;
+named here, not pursued.)
+
+## Local Structure: Ego Networks and Clustering
+
+Zoom in on a single node `v` and its immediate surroundings and you get its **ego network**: `v` (the
+"ego"), its neighbours (the "alters"), and the edges among them. Ego networks are how you study one
+person's local world without the whole graph.
+
+Two local readings:
+
+- **Clustering coefficient** of a node — of all the *pairs* of its neighbours, what fraction are
+  themselves connected? High clustering means "my friends are friends with each other" — a tight-knit
+  clique. Social networks are famously high-clustering.
+- **Distances and components.** Is the graph one connected piece, or several? How many edges separate
+  the two most distant nodes (the **diameter**)? Real social graphs are **small worlds**: even hundreds
+  of nodes are typically just a few hops apart.
+
+## NetworkX in One Page
+
+NetworkX is the standard Python library for graphs. The verbs you need this lesson:
+
+| Task | NetworkX |
+|------|----------|
+| Build / load a graph | `nx.Graph()`, `add_edge`, `nx.read_edgelist`, `nx.karate_club_graph()` |
+| Inspect | `G.number_of_nodes()`, `G.number_of_edges()`, `G.degree()`, `G.neighbors(v)` |
+| Adjacency matrix | `nx.to_numpy_array(G, weight=None)` |
+| Centrality | `nx.degree_centrality`, `nx.betweenness_centrality`, `nx.closeness_centrality` |
+| Local structure | `nx.ego_graph`, `nx.clustering`, `nx.connected_components` |
+| Distances | `nx.shortest_path_length`, `nx.diameter` |
+| Draw | `nx.draw`, `nx.spring_layout` |
+
+For graphs with millions of nodes you would move to a faster engine (igraph, graph-tool) or an
+interactive tool (Gephi); the **SNAP** repository's Facebook ego-networks are a good next dataset. For
+learning the ideas, a 34-node graph you can draw entirely is exactly right.
+
+> **Forward to L26.** We measured *one* node at a time — degree, centrality, the neighbourhood. The next
+> lesson asks a **global** question: do the nodes fall into **communities** — dense groups with sparse
+> links between them — and can an algorithm recover the karate club's two real factions from structure
+> alone? That is **community detection**.
+
+## Quiz Hooks
+
+- What a graph is, and the node/edge vocabulary; directed vs. undirected, weighted vs. unweighted. *(Understand, MC)* 
+- Reading degree, neighbours, and density off a small graph. *(Understand / Apply, MC)* 
+- The adjacency matrix: symmetry for undirected graphs, row sum = degree, and what `A @ A` counts (the L18 bridge). *(Analyze, MC)* 
+- The three centralities and what each one means. *(Understand, MC)* 
+- Why centralities disagree: identifying the *broker* (high betweenness, not necessarily high degree). *(Analyze, MC)* 
+- Ego networks and local structure: what the clustering coefficient measures. *(Understand / Apply, MC)* 
+
+## FAQ
+
+**Should friendship be a directed or undirected graph?**
+Undirected — friendship (and a shared flight route, or a co-authorship) is mutual. Use a **directed**
+graph when the relationship has a direction: "follows", "cites", "links to", "pays".
+
+**Is the adjacency matrix always 0s and 1s?**
+Only for an unweighted graph. For a **weighted** graph the entries are the edge weights. We use the
+binary (0/1) form here because we care about the *structure* of ties; `nx.to_numpy_array(G, weight=None)`
+forces it even when the graph stores weights.
+
+**Which centrality should I use?**
+It depends on the question. "Who has the most direct reach?" — degree. "Who is the critical bridge
+whose removal fragments the network?" — betweenness. "Who can reach everyone fastest?" — closeness.
+Report more than one; their disagreements are informative.
+
+**Do I need the adjacency matrix if NetworkX computes degree for me?**
+Not for degree itself — but the matrix view is how many graph algorithms are actually defined and
+implemented (PageRank, spectral methods), and it is the cleanest way to see *why* `A @ A` counts shared
+friends. It is the same data NetworkX stores, made explicit.
+
+## Cheat-sheet
+
+| You want... | Do this |
+|-------------|---------|
+| A graph from an edge list | `G = nx.Graph(); G.add_edges_from(edges)` |
+| The built-in example | `G = nx.karate_club_graph()` |
+| Number of nodes / edges | `G.number_of_nodes()`, `G.number_of_edges()` |
+| One node's neighbours / degree | `list(G.neighbors(v))`, `G.degree(v)` |
+| Binary adjacency matrix | `A = nx.to_numpy_array(G, weight=None)` |
+| Degree from the matrix | `A.sum(axis=1)` |
+| Shared-neighbour counts | `A @ A` (off-diagonal entries) |
+| The important nodes | `nx.betweenness_centrality(G)` (and friends) |
+| One node's local world | `nx.ego_graph(G, v, radius=1)` |
+
+## Where to Go Deeper
+
+- **NetworkX documentation** — tutorial and the algorithms reference (`networkx.org`).
+- **SNAP (Stanford Network Analysis Project)** — real network datasets, including the Facebook
+  ego-networks the original case study used.
+- **Barabasi, *Network Science* (free online), Chapter 2** — graphs, degree distributions, and why
+  social networks are heavy-tailed small worlds.

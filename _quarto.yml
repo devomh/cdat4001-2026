@@ -37,9 +37,55 @@ website:
           - u03_eda/l09_concept_eda_visual_methods.qmd
           - u03_eda/l09_lab_eda_visual_methods.md
           - u03_eda/l10_lab_eda_mini_project.md
+      - section: "Unit IV — Data Mining"
+        contents:
+          - u04_data_mining/l11_concept_feature_engineering.qmd
+          - u04_data_mining/l11_lab_feature_engineering.md
+          - u04_data_mining/l12_concept_text_features.qmd
+          - u04_data_mining/l12_lab_text_features.md
+          - u04_data_mining/l13_concept_feature_selection_filters.qmd
+          - u04_data_mining/l13_lab_feature_selection_filters.md
+          - u04_data_mining/l14_concept_feature_selection_trees.qmd
+          - u04_data_mining/l14_lab_feature_selection_trees.md
+          - u04_data_mining/l15_lab_data_mining_mini_project.md
+      - section: "Unit V — Visualization"
+        contents:
+          - u05_visualization/l16_concept_spatial_visualization.qmd
+          - u05_visualization/l16_lab_mapping_earthquakes.md
+          - u05_visualization/l17_concept_temporal_visualization.qmd
+          - u05_visualization/l17_lab_san_juan_climate.md
+      - section: "Foundations — Linear Algebra"
+        contents:
+          - foundations/l18_concept_linear_algebra.qmd
+          - foundations/l18_lab_linear_algebra.md
+      - section: "Unit V — Visualization (continued)"
+        contents:
+          - u05_visualization/l19_concept_correlation.qmd
+          - u05_visualization/l19_lab_correlation.md
+          - u05_visualization/l20_concept_pca.qmd
+          - u05_visualization/l20_lab_penguins_pca.md
+          - u05_visualization/l21_concept_clustering_outliers.qmd
+          - u05_visualization/l21_lab_penguins_clustering.md
+      - section: "Unit VI — Recommender Systems"
+        contents:
+          - u06_recommender_systems/l22_concept_collaborative_filtering.qmd
+          - u06_recommender_systems/l22_lab_collaborative_filtering.md
+          - u06_recommender_systems/l23_concept_content_based_recommenders.qmd
+          - u06_recommender_systems/l23_lab_content_based_recommenders.md
+          - u06_recommender_systems/l24_lab_recommender_mini_project.md
+      - section: "Unit VII — Social Networks"
+        contents:
+          - u07_social_networks/l25_concept_social_networks_graphs.qmd
+          - u07_social_networks/l25_lab_social_networks_graphs.md
+          - u07_social_networks/l26_concept_community_detection.qmd
+          - u07_social_networks/l26_lab_community_detection.md
+      - section: "Unit VIII — Governance"
+        contents:
+          - u08_governance/l27_concept_data_ethics.qmd
+          - u08_governance/l28_concept_data_law_standards.qmd
       # Rebuild 2026-06-19 (syllabus-derived; see ../_syllabus/lesson-schedule.md).
-      # Remaining unit sections (III-VIII + the L18 linear-algebra foundations lesson) repopulate
-      # here as lessons are regenerated and published, in teaching order.
+      # L18 (foundations) sits between L17 and L19 in teaching order (overlay RESOLVED 2026-06-20).
+      # Unit V COMPLETE (L16-L21). Units VI-VIII repopulate here as published.
 
 format:
   html:

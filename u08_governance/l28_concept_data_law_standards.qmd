@@ -1,0 +1,225 @@
+---
+title: "Data Law, Regulation & Standards"
+unit: "VIII"
+lesson: "28"
+type: concept
+tags: [data-law, gdpr, hipaa, ferpa, standards, governance, compliance, puerto-rico]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Distinguish** a law, a regulation, and a standard, and **explain** how legal duties relate to the ethics of L27. *(Understand)*
+- **Identify** what **GDPR**, **HIPAA**, and **FERPA** each protect, and their core rights and de-identification ideas. *(Understand)*
+- **Explain** the Puerto Rico / US jurisdictional context and the role of voluntary **standards** and governance practices. *(Understand)*
+- **Apply** the right rule(s) to a data-handling scenario and say what compliance requires. *(Apply / Analyze)*
+
+> **Where this sits:** **L27** argued what you *should* do (ethics) · this lesson covers what society made *mandatory* (the law) and walks one worked case · it **closes Unit VIII and the course** -- from "what is data science?" (L01) to governing it responsibly.
+
+## Why This Matters
+
+Last lesson ended on responsibility: ethics is what you should do even where no law reaches. But for a
+growing share of data work, society has stopped leaving it to conscience and **written the rules down** --
+with real penalties attached. Mishandle EU residents' data and the fine can reach **4% of a company's
+global annual revenue**; mishandle a patient's record and HIPAA penalties (and criminal liability) follow;
+mishandle a student's transcript and FERPA puts an institution's federal funding at risk.
+
+For a data scientist this is not a reason to fear the law -- it is a reason to **know which rules touch
+your data before you touch it**: what you may collect, for what purpose, how long you may keep it, what
+you must let people do with their own data, and what legally counts as "de-identified". This lesson maps
+that terrain, then walks one case end to end, so the rules become a **checklist you can run** rather than a
+wall you hit after launch.
+
+> **Orientation, not legal advice.** This lesson teaches what these rules require *of your data work* and
+> when to bring in a lawyer. Laws change and vary by jurisdiction; for any real decision, consult counsel
+> and the current official text.
+
+## Law vs. Regulation vs. Standard
+
+Three words that are often blurred:
+
+- A **law / regulation** is **mandatory** -- enacted by a government, enforced with penalties. (In common
+  use, a *statute* is passed by a legislature and a *regulation* is the detailed rule an agency writes to
+  implement it; for our purposes both are binding.)
+- A **standard** is **voluntary** -- a best-practice framework published by a standards body (ISO, NIST).
+  You are not jailed for ignoring it, but customers and contracts increasingly require it, and following
+  it is strong evidence of due diligence.
+
+Recall L27: **the law is the floor, not the ceiling.** Compliance is the minimum; plenty that is legal can
+still be unethical. Law tells you what you *must* do; ethics still asks what you *should*.
+
+## The Big Three
+
+```{mermaid}
+flowchart TD
+    S[You hold a dataset] --> Q1{Does it identify<br/>real people?}
+    Q1 -->|No, truly de-identified| LOW[Lighter duties<br/>but watch re-identification - L27]
+    Q1 -->|Yes| Q2{What kind of data,<br/>and whose?}
+    Q2 -->|Health / treatment| H[HIPAA<br/>PHI, covered entities]
+    Q2 -->|Student education records| F[FERPA<br/>disclosure needs consent]
+    Q2 -->|EU residents' data| G[GDPR<br/>principles + data-subject rights]
+    Q2 -->|Anyone, in Puerto Rico| P[US federal law applies<br/>+ PR Act 111-2005 breach notice]
+```
+
+### GDPR -- the EU's General Data Protection Regulation (in force 2018)
+
+The most influential data law in the world; it applies **extraterritorially** -- if you process the
+personal data of people in the EU, it reaches you wherever you are. It is built on a set of **principles**
+for handling personal data:
+
+- **Lawfulness, fairness, transparency** -- have a legal basis and be open about it.
+- **Purpose limitation** -- collect for a specific stated purpose; do not silently reuse it for another.
+- **Data minimization** -- collect only what you actually need.
+- **Accuracy**, **storage limitation** (do not keep it forever), and **accountability** (you must be able
+  to *show* compliance).
+
+And it grants people **data-subject rights** over their own data: **access** (get a copy), **rectification**
+(fix errors), **erasure** (the "right to be forgotten"), **portability** (take it elsewhere), and the right
+to **object**. The penalties are real -- up to the greater of a large fixed sum or **4% of global annual
+turnover** -- which is why GDPR reshaped industry practice worldwide.
+
+### HIPAA -- US health-information privacy (1996)
+
+HIPAA protects **PHI (Protected Health Information)** -- identifiable health and treatment data -- held by
+**covered entities** (health providers, plans, and clearinghouses) and their business associates. Its
+Privacy Rule limits how PHI may be used and shared. Crucially for a data scientist, it defines when data
+counts as **de-identified** and so escapes most of the rule -- the **Safe Harbor** method requires removing
+**18 specified identifiers** (names, full dates, ZIP codes beyond the first three digits, record numbers,
+and so on). This is exactly L27's lesson in legal form: **stripping a name is not enough**; de-identification
+is a defined, demanding standard, because combinations of attributes re-identify people.
+
+### FERPA -- US student-education-records privacy (1974)
+
+FERPA protects students' **education records** at institutions that receive federal funding. It gives
+students (or parents, until the student is 18 or in college) the right to **access and amend** their
+records, and generally **requires consent before the institution discloses** personally identifiable
+information from those records to a third party (with specific exceptions, such as school officials with a
+legitimate educational interest). For a university data project, FERPA is usually the first rule in the
+room.
+
+## The Puerto Rico / US Context
+
+Puerto Rico is a **US territory**, so **US federal laws -- including HIPAA and FERPA -- apply here** just as
+on the mainland. On top of the federal floor, Puerto Rico has its **own** data-protection statutes; the
+most relevant is **Act No. 111 of 2005** (the citizen-information / data-bank security act), which requires
+notifying people when a security breach exposes their personal information. The practical lesson:
+**know your jurisdiction** -- the rules are the union of the federal laws, the local laws, and (if your
+users are elsewhere) their laws too. (As always, verify the current statute and consult counsel.)
+
+## Standards and Governance
+
+Beyond binding law sit **voluntary standards** that organizations adopt to *demonstrate* good practice:
+
+- **ISO/IEC 27001** -- the international standard for an information-security management system (ISMS);
+  organizations get **certified** against it.
+- **NIST** frameworks (US) -- the Cybersecurity Framework and the Privacy Framework, widely used reference
+  models.
+
+Following a standard is not the same as following the law, but it is how most organizations *operationalize*
+the law. The governance practices you will meet on the job:
+
+- **Privacy by design** -- build protection in from the start, not bolted on after.
+- **Data minimization & purpose limitation** -- the GDPR principles, applied as daily habits. (This is the
+  same instinct as L11/L15's "which features do we actually need?" -- now a legal duty.)
+- A **DPIA** (Data Protection Impact Assessment) -- a structured risk review before a high-risk project.
+- The **DPO** (Data Protection Officer) -- the person accountable for compliance.
+
+## Worked Case Study: a university clinic shares athlete data
+
+A Puerto Rico university's health clinic wants to share **student-athletes' injury and treatment data**
+with an outside sports-analytics company to build a recovery-prediction model. Which rules apply, and what
+must happen first? Walk it like a checklist.
+
+1. **Identify the data and the actors.** The records are *student* records held by a *school* -- and they
+   are *health/treatment* data -- and the recipient is an *outside company*. Three overlaps at once.
+2. **FERPA** (education records). The data is part of the students' education records, so disclosing it to
+   a third party generally needs **written consent**, unless a specific exception (e.g. a properly
+   structured "school official"/vendor arrangement with control over the data) applies.
+3. **HIPAA** (health data). If the clinic is a covered entity, the treatment data is **PHI**; sharing it
+   requires either authorization or proper **de-identification** -- and de-identification means the
+   **Safe Harbor 18 identifiers**, not just dropping names. (Whether campus health-clinic records fall
+   under HIPAA or under FERPA's "treatment records" is itself a question for counsel -- exactly the kind of
+   overlap you flag rather than guess.)
+4. **Minimization & purpose limitation.** Share only the fields the model actually needs, for the stated
+   recovery-prediction purpose only -- not "all the data, in case it is useful". A written agreement binds
+   the vendor to that purpose.
+5. **Breach duty (PR Act 111-2005).** If identifiable data is shared and later leaks, Puerto Rico law
+   requires notifying the affected people.
+6. **GDPR reach.** If any athletes are EU residents (an exchange student, say), GDPR applies to their data
+   regardless of where the processing happens.
+
+**The decision:** do not hand over the raw records. De-identify to the Safe Harbor standard (or obtain
+explicit consent), share only the minimal fields under a purpose-limited agreement, document the analysis,
+and have counsel review before anything moves. That is compliance -- and, not coincidentally, it is also
+the ethical answer from L27.
+
+## Your Role -- and Closing the Course
+
+You are not the lawyer. But you are the person who knows **exactly what data flows where**, which makes you
+the one who can flag a problem while it is still cheap to fix. Build compliance in early: **minimize,
+document, de-identify, and ask counsel when unsure.** "I just built the model" was not a defense in L27,
+and it is not one here either.
+
+> **Course close.** You started at "what is data science?" (L01) and built outward: acquiring data at scale
+> (Unit II), exploring it (Unit III), engineering and selecting features (Unit IV), visualizing and reducing
+> it (Unit V), the linear algebra underneath (L18), recommending (Unit VI), and networks (Unit VII). Unit
+> VIII closed the loop with the two obligations that make all of it *professional* rather than merely
+> technical: **ethics** -- what you should do -- and **law** -- what you must. Carry both into every project.
+
+## Discussion Prompts
+
+For each, name which rules apply and what compliance would require.
+
+1. A PR hospital wants to publish an "anonymized" dataset of patient visits for a research competition
+   (echo L27's Netflix case). What does HIPAA require before release, and why is "we removed the names"
+   not enough?
+2. A startup based in San Juan offers an app to users across the US **and** the EU. A user in Germany asks
+   the company to delete all their data. Which law gives them that right, and must the startup comply?
+3. A professor wants to share a spreadsheet of student grades with an external tutoring vendor to target
+   help. Which rule is in the room first, and what would make the sharing lawful?
+
+## Quiz Hooks
+
+- The difference between a law/regulation (mandatory) and a standard (voluntary), and law as the "floor". *(Understand, MC)* 
+- How legal compliance relates to ethics (compliance is the minimum, not the whole of doing right). *(Understand, MC)* 
+- What GDPR, HIPAA, and FERPA each protect (match the law to its domain). *(Understand, MC)* 
+- A core data-subject right or de-identification idea: GDPR erasure / the HIPAA Safe Harbor "remove the identifiers". *(Understand / Analyze, MC)* 
+- The Puerto Rico / US context: US federal law applies in PR, plus PR's own breach-notification duty; standards are voluntary. *(Understand, MC)* 
+- Apply the right rule(s) to a short scenario and say what compliance requires. *(Apply / Analyze, MC)* 
+
+## FAQ
+
+**If data is de-identified, is it still regulated?**
+Largely not -- but only if it is *truly* de-identified to the legal standard (for HIPAA, the Safe Harbor 18
+identifiers or an expert determination). Naive anonymization (just dropping names) does **not** clear the
+bar, because re-identification is possible (L27). Done properly, de-identification is the main lawful path
+to sharing health data for analysis.
+
+**Does GDPR apply to us in Puerto Rico?**
+It can. GDPR is **extraterritorial**: if you process the personal data of people who are in the EU (offering
+them goods/services or monitoring them), it applies regardless of where you or your servers are. For a
+purely local PR/US audience it usually does not -- but the moment your users include EU residents, it does.
+
+**Is following the standard the same as following the law?**
+No. A standard (ISO 27001, NIST) is voluntary best practice; a law is mandatory. Following a standard helps
+you comply and shows due diligence, but it does not replace the legal requirements -- and the law can demand
+things no standard covers.
+
+**Do I need to memorize statute article numbers and fine amounts?**
+No. Know *which rule governs which data* and *what it requires of your work* -- and know when to call
+counsel. The specifics are looked up, not memorized.
+
+## Where to Go Deeper
+
+- **GDPR** -- the official EU summary and full text at `gdpr.eu` / the European Commission's data-protection
+  pages.
+- **HIPAA** -- the US Department of Health & Human Services HIPAA Privacy Rule summary (`hhs.gov`), including
+  the de-identification guidance.
+- **FERPA** -- the US Department of Education Student Privacy Policy Office (`studentprivacy.ed.gov`).
+- **ISO/IEC 27001** -- the ISO standard overview page; and the **NIST** Privacy Framework
+  (`nist.gov/privacy-framework`).
+- **Puerto Rico** -- Act No. 111 of 2005 on citizen information / data-bank security (verify the current
+  consolidated text and any amendments).

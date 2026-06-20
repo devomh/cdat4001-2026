@@ -1,0 +1,280 @@
+---
+title: "Linear Algebra for Data Science"
+unit: "Foundations"
+lesson: "18"
+type: concept
+tags: [linear-algebra, numpy, vectors, matrices, dot-product, matrix-multiplication]
+difficulty: introductory
+duration: "50 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Represent** tabular data as vectors and matrices, and **read** an array's shape (rows by columns). *(Understand)*
+- **Compute** a dot product — by hand and with `@` — and **interpret** it as a weighted sum and as a similarity score (including cosine). *(Apply)*
+- **Apply** a matrix-vector product to score every item for one user, and a matrix-matrix product to score all users against all items at once. *(Apply)*
+- **Predict** the shape of a product from the inner-dimension rule, and **use** transpose, the identity matrix, and projection onto a direction. *(Apply / Analyze)*
+
+> **Where this sits:** a cross-cutting **foundations** primer, taught at the seam of Unit V — after the qualitative half (**L16** space, **L17** time) and right before the quantitative half. It is the toolkit that **L19** (correlation), **L20** (PCA), and **Unit VI** (recommenders) all run on.
+
+> **Hands-on:** [Lab — Linear Algebra in NumPy](l18_lab_linear_algebra.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/foundations/l18_lab_linear_algebra.ipynb)
+
+## Why This Matters
+
+The back half of this course looks like four unrelated topics — correlation,
+dimensionality reduction (PCA), recommender systems, social-network graphs —
+but underneath they run on the *same five operations*, and you have been
+using the first one since L02 without naming it. "How alike are two users?"
+is a **dot product**. "Score every movie for one user" is a **matrix times a
+vector**. "Predict every user's rating of every movie" is a **matrix times a
+matrix**. None of this requires the linear-algebra course you may not have
+taken — just the handful of operations below, all one line each in NumPy.
+
+This is a foundations primer: small, operational, no proofs. We drill the
+operations on a movie-ratings world tiny enough to check by hand, so that
+when L20 *projects* data onto a new axis or a recommender *multiplies*
+user-factors by item-factors, the machinery is already familiar.
+
+## Data as Vectors and Matrices
+
+> **Analogy:** a **vector** is one row of a spreadsheet — a list of numbers
+> in order. A **matrix** is the whole sheet — a grid of numbers, rows by
+> columns. NumPy stores both in the `ndarray` you met in L02.
+
+Take four users rating five movies from 1 to 5. The whole table is a
+**matrix** `R` with shape `(4, 5)` — 4 rows (users), 5 columns (movies). One
+user's ratings are a **vector** — a single row.
+
+```python
+import numpy as np
+
+#               Action1 Action2 Romance1 Romance2 Comedy
+R = np.array([[5, 4, 1, 1, 3],    # Ana   -- action fan
+              [4, 5, 2, 1, 2],    # Beto  -- action fan
+              [1, 1, 5, 4, 3],    # Carla -- romance fan
+              [2, 1, 4, 5, 3]])   # Dani  -- romance fan
+
+R.shape        # (4, 5)  -> (rows, cols) = (users, movies)
+R[0]           # array([5, 4, 1, 1, 3])  -- Ana's row, a vector
+R[:, 2]        # array([1, 2, 5, 4])     -- the Romance1 column
+R[0, 4]        # 3  -- Ana's rating of Comedy
+```
+
+The **shape** `(rows, cols)` is the single most important thing to track:
+nearly every linear-algebra bug is a shape that did not line up. Say the
+shape out loud before every operation.
+
+## The Dot Product
+
+The **dot product** of two equal-length vectors multiplies them
+element-by-element and adds up the results — one number out:
+
+```python
+ana, beto, carla = R[0], R[1], R[2]
+np.sum(ana * beto)   # 49   -- elementwise multiply, then sum
+np.dot(ana, beto)    # 49   -- the same thing, named
+ana @ beto           # 49   -- the @ operator, the usual way to write it
+```
+
+That single number has two readings, and both run the back half of the
+course:
+
+- **A weighted sum.** $a \cdot b = \sum_i a_i b_i$. If `b` is a vector of
+  weights, `a @ b` is "combine the entries of `a` with those weights" — how
+  a model turns features into one score.
+- **A similarity score.** Two vectors that are large in the same positions
+  produce a big dot product. `Ana @ Beto = 49` (both love action) beats
+  `Ana @ Carla = 27` (tastes diverge).
+
+Raw dot products are inflated by magnitude — someone who rates everything
+5 looks "similar" to everyone. **Cosine similarity** removes magnitude by
+dividing by the vectors' lengths, leaving only the angle between them:
+
+$$\cos(a, b) = \frac{a \cdot b}{\lVert a \rVert \, \lVert b \rVert}$$
+
+where $\lVert a \rVert = \sqrt{a \cdot a}$ is the vector's length (its
+**norm**).
+
+```python
+def cosine(a, b):
+    return a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
+
+cosine(ana, beto)    # 0.961  -- two action fans: nearly the same direction
+cosine(ana, carla)   # 0.519  -- action vs romance: pulling apart
+```
+
+A clean **0.96 vs 0.52**: the dot product, normalized, answers "how alike
+are two users?" — the engine of the recommenders in Unit VI. (It is also
+one short step from **L19's** correlation, which is the cosine of two
+*mean-centered* vectors.)
+
+## Matrix times Vector
+
+A dot product compares *two* vectors. A **matrix-vector product** does one
+dot product for *every row of the matrix at once*. Give each movie two
+feature scores — how much *action* and how much *romance* it has — in a
+matrix `F` with shape `(5, 2)`, and give one user a taste vector `w` (how
+much they like action vs romance). Then `F @ w` scores all five movies in a
+single multiply:
+
+```python
+F = np.array([[1.0, 0.0],    # Action1   [action, romance]
+              [0.9, 0.1],    # Action2
+              [0.0, 1.0],    # Romance1
+              [0.1, 0.9],    # Romance2
+              [0.5, 0.5]])   # Comedy
+w_ana = np.array([1.0, 0.2])     # Ana loves action, mild on romance
+
+F @ w_ana    # array([1.  , 0.92, 0.2 , 0.28, 0.6 ])
+```
+
+Each entry is one dot product — row of `F` with `w` — so Action1 scores
+`1.0` and Romance1 only `0.2`. One operation, every item scored for this
+user. The shapes tell you it will work: `(5, 2) @ (2,) -> (5,)`. The rule:
+
+::: {.callout-important title="The inner-dimension rule"}
+A product `A @ B` is legal only when the **inner** dimensions match:
+`(m, n) @ (n, p) -> (m, p)`. The shared `n` cancels; the result keeps the
+**outer** dimensions `m` and `p`. Here `(5, 2) @ (2,)` shares the `2`, so
+the result has length `5`. Mismatched inner dimensions are the single most
+common linear-algebra error — and NumPy raises a `ValueError` rather than
+guessing.
+:::
+
+## Matrix times Matrix
+
+Stack many users' taste vectors into a matrix and you can score *all users
+against all items in one shot*. This is **matrix-matrix multiplication**,
+and it is exactly how recommender systems work (Unit VI): a **user-factor**
+matrix `U` (each user's taste, `4 x 2`) times an **item-factor** matrix `V`
+(each movie's features, `2 x 5`) gives a full table of predicted ratings.
+
+We already have the item features in `F` (shape `5 x 2`); we need them as
+`2 x 5`, which is the **transpose** `F.T` — rows become columns:
+
+```python
+U = np.array([[1.0, 0.2],    # Ana    [action-taste, romance-taste]
+              [0.9, 0.1],    # Beto
+              [0.2, 1.0],    # Carla
+              [0.1, 0.9]])   # Dani
+V = F.T          # shape (2, 5): the two factors as rows
+
+R_hat = U @ V    # (4, 2) @ (2, 5) -> (4, 5): every user x every movie
+```
+
+`R_hat[0]` comes out `[1.0, 0.92, 0.2, 0.28, 0.6]` — *identical* to the
+matrix-vector score we computed for Ana alone. Matrix-matrix multiplication
+is just the matrix-vector product run for every user at once. That single
+`U @ V` — predicting all ratings from compact factors — is the heart of
+**matrix factorization**, the recommender technique of Unit VI.
+
+## Transpose, Identity, and Shapes
+
+Three small tools round out the kit:
+
+- **Transpose** (`A.T`) flips rows and columns: `(5, 2)` becomes `(2, 5)`.
+  Use it to make inner dimensions line up (as we did to build `V` from `F`).
+- **Identity matrix** (`np.eye(n)`) is the "do-nothing" matrix — 1s on the
+  diagonal, 0s elsewhere. `A @ I == A`, the matrix version of multiplying by
+  1. It is the reference point for "undoing" a matrix (the matrix inverse,
+  which this course does not cover).
+- **Shapes** are the contract. Read them before every `@`: if the inner
+  dimensions match, the product exists and you already know its shape.
+
+```python
+F.T.shape            # (2, 5)
+F @ np.eye(2)        # == F  (the identity changes nothing)
+# (4, 2) @ (2, 5) -> (4, 5)   inner 2 == 2, OK
+# (4, 2) @ (4, 2) -> ValueError: inner 2 != 4
+```
+
+## Projection: a Peek at PCA
+
+One more move, because the whole of **L20** rests on it. Projecting a point
+onto a direction is just a dot product: take a **unit** direction vector `d`
+(length 1) and compute `point @ d` — the result is *where the point falls
+along that axis*, a single number that summarizes a multi-dimensional point
+by one coordinate.
+
+Project each user's 2-D taste vector onto the "action-versus-romance" axis
+`d = [1, -1]/sqrt(2)`:
+
+```python
+d = np.array([1.0, -1.0]) / np.sqrt(2)
+U @ d    # array([ 0.566,  0.566, -0.566, -0.566])
+#          Ana    Beto    Carla   Dani
+```
+
+![Scatter plot of four users in a two-dimensional space whose axes are an action factor and a romance factor. Ana and Beto sit in red at the lower-right (high action, low romance); Carla and Dani sit in blue at the upper-left (low action, high romance). A dashed gray diagonal line runs from upper-left to lower-right through the origin, the projection axis; thin lines drop each user onto that axis, where the two red points land together on the positive side and the two blue points land together on the negative side.](assets/l18_projection.png)
+
+**Reading the output:** two numbers — `+0.566` for the action fans, `-0.566`
+for the romance fans — separate the four users on a *single* axis. We turned
+a 2-D dataset into 1-D and kept the structure that mattered. That is exactly
+what **PCA** (L20) does, except PCA *finds* the most informative direction
+for you instead of being handed one. Projection is a dot product; PCA is
+projection onto a cleverly chosen `d`.
+
+## When to Use Which / Common Pitfalls
+
+- **`@` is not `*`.** `a * b` multiplies element by element (same shape out);
+  `a @ b` is the dot/matrix product (dimensions collapse). Reaching for `*`
+  when you meant `@` is the classic first-week bug.
+- **Shape mismatch.** `A @ B` needs `A.shape[1] == B.shape[0]`. When NumPy
+  raises a `ValueError`, print both shapes and check the inner pair — often
+  a missing `.T`.
+- **Row vs column orientation.** A 1-D array `(n,)` works on either side of
+  `@` — NumPy infers whether it should act as a row or a column. (Explicit
+  2-D column vectors `(n, 1)` are stricter about shape, but you will not need
+  them here.)
+- **Unnormalized similarity.** A raw dot product rewards big magnitudes;
+  for "how alike" use cosine (or mean-center first, which is L19's road to
+  correlation).
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Given a small table and a claim about it, identify which object is a vector vs a matrix and state the matrix's shape as (rows, cols) 
+- Given two short vectors, pick the correct dot product and the right reading (weighted sum / similarity); recognize why cosine is used instead of the raw dot for "how alike" 
+- Pick the operation that "scores every item for one user in one step" (matrix-vector) vs "scores all users against all items" (matrix-matrix), and which one matrix factorization uses 
+- Given two shapes, decide whether `A @ B` is legal and state the result shape (the inner-dimension rule); or pick what transpose / a projection does 
+
+## FAQ / Industry Reality
+
+**"Do I need eigenvalues, determinants, and matrix inverses?"** — Not for
+this course. Those are the deeper layer (and the reason a full linear-algebra
+course exists); PCA's *derivation* uses eigenvectors, but you will *run* PCA
+with one scikit-learn call in L20. This primer is deliberately the operational
+subset: the operations you will actually type.
+
+**"Is `@` just `*` for arrays?"** — No, and confusing them is the most common
+NumPy mistake. `*` is elementwise (shapes unchanged); `@` is the dot/matrix
+product (dimensions contract by the inner-dimension rule). Different math,
+different output shape.
+
+**"Why NumPy instead of Python loops?"** — The same reason as L02: a matrix
+multiply is one vectorized C-level call over the whole array, hundreds of
+times faster than nested Python loops, and it reads as the math it is.
+
+## Cheat-sheet
+
+| Task | NumPy |
+|---|---|
+| Make a matrix / read its shape | `np.array([[...], [...]])` · `A.shape` |
+| Grab a row (vector) / a column | `A[i]` · `A[:, j]` |
+| Dot product of two vectors | `a @ b` (or `np.dot(a, b)`) |
+| Vector length (norm) | `np.linalg.norm(a)` |
+| Cosine similarity | `a @ b / (norm(a) * norm(b))` |
+| Score all items for one user | `F @ w` (matrix x vector) |
+| Score all users x all items | `U @ V` (matrix x matrix) |
+| Transpose / identity | `A.T` · `np.eye(n)` |
+| Project onto a unit direction | `points @ d` |
+
+## Where to Go Deeper
+
+- **The intuition, visually:** [3Blue1Brown — Essence of Linear Algebra](https://www.3blue1brown.com/topics/linear-algebra) — short videos on vectors, the dot product, and matrices as transformations; the geometry behind everything above.
+- **Official docs:** [NumPy — Linear algebra (`numpy.linalg`)](https://numpy.org/doc/stable/reference/routines.linalg.html) — `norm`, `@`/`matmul`, and the solvers you will meet later.
+- **One rung up:** any "linear algebra for machine learning" reference — the same operations, plus the eigen-decomposition that powers PCA (L20) under the hood.

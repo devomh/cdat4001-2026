@@ -1,0 +1,188 @@
+---
+title: "Feature Selection I: Filter Methods"
+unit: "IV"
+lesson: "13"
+type: concept
+tags: [feature-selection, filter-methods, chi-square, mutual-information, variance-threshold, data-mining]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Explain** why selecting a few informative features beats keeping thousands of weak ones. *(Understand)*
+- **Rank** features with a chi-square filter and **interpret** the top and bottom of the ranking. *(Apply / Analyze)*
+- **Apply** a variance-threshold and a mutual-information filter, and **say** what each one adds. *(Apply)*
+- **Identify** the filter blind spot -- a feature judged alone can hide an interaction. *(Analyze / Evaluate)*
+
+> **Hands-on:** [Lab — From 2,003 Features to the 30 That Matter](l13_lab_feature_selection_filters.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u04_data_mining/l13_lab_feature_selection_filters.ipynb)
+
+> **Where this sits:** after **L11/L12** *built* features (structured columns, then text) · this is the first of two selection lessons -- **filters** here, **model-based** selection in **L14** · Unit IV's analysis half.
+
+## Why This Matters
+
+In L12 you turned 5,574 text messages into a feature matrix with **2,003 columns**. Now your boss asks the
+obvious question: *"So -- what makes a message spam?"*
+
+You cannot answer with 2,003 numbers. Most of those columns are noise: words that appear a handful of
+times, words that appear equally in both classes, words that duplicate what another column already says.
+Somewhere in the matrix, a small set of features carries nearly all the signal. Finding it is **feature
+selection**, and it is the skill this unit's title promises: *extracting information* from data. This
+lesson scores and ranks features **without training any model**; L14 then lets a model do the selecting.
+
+## What Is Feature Selection?
+
+> **Analogy:** a detective canvassing an apartment building interviews two hundred residents, but the case
+> turns on two witnesses. The skill is not collecting more statements -- it is recognizing which two matter.
+
+**Feature selection** is choosing a subset of the existing columns to keep, and discarding the rest. It is
+the complement of L11 and L12: feature *engineering* invented columns; feature *selection* decides which
+ones deserve to stay. Three reasons to bother:
+
+- **Interpretability.** Thirty features can be inspected, plotted, and explained to a boss. Two thousand
+  cannot.
+- **Noise.** Useless columns do not just sit quietly -- an algorithm searching for patterns can find
+  accidental ones in them. Fewer, better features means fewer chances to be fooled.
+- **Cost.** Every column must be computed, stored, and maintained for every new observation, forever. A
+  feature that earns nothing still bills you.
+
+## The Filter Idea
+
+A **filter method** scores every feature *independently* and ranks them, then keeps the top *k*. The score
+measures how strongly a feature relates to the **label** -- the answer column you already have (here,
+`ham` or `spam`, known for every message). No model is trained: a filter is a statistical test applied
+once per column, 2,003 times over. That makes filters fast and able to scale to any width -- and gives them
+a blind spot we return to at the end.
+
+We will use three: one that needs no label at all, and two that score against it.
+
+## Variance Threshold
+
+The cheapest filter ignores the label entirely: **drop the columns that barely vary.** A word that appears
+in almost no messages is a column of almost all zeros -- near-constant, and a constant cannot help separate
+anything. `VarianceThreshold` removes them. On the SMS matrix, dropping columns with variance below `0.001`
+cuts **2,003 features to 1,483** in one line -- 520 near-dead columns gone before any label-based scoring
+begins. Use it as a first triage, not a final answer: a rare word can still be a perfect spam tell.
+
+## Chi-Square
+
+The classic filter for count data is the **chi-square ($\chi^2$) score**. Its question, for each feature:
+*does this feature appear differently across the classes than chance would predict?* Take the word "free":
+
+| | contains "free" | does not | total |
+|---|---|---|---|
+| **spam** | **170** | 577 | 747 |
+| **ham** | 59 | 4,768 | 4,827 |
+| **total** | 229 | 5,345 | 5,574 |
+
+If "free" ignored the label, spam's share of it would match spam's share of the corpus:
+$229 \times (747 / 5574) \approx$ **31** spam messages would contain "free". We observe **170** -- more than
+five times the expected count. The chi-square statistic adds up gaps like that (squared, scaled by the
+expected counts) across the table; a word distributed indifferently to the label scores near **zero**.
+scikit-learn's `chi2` applies the same idea to the count values and ranks all 2,003 features at once:
+
+![Horizontal bar chart of the top 15 features by chi-square score. digit_count (about 65,000) and length (about 36,000) dwarf every word; below them the vocabulary words free, txt, claim, mobile, www, prize, stop (with the handcrafted exclam_count among them) and a few number-tokens form a short tail from roughly 1,000 down to 400.](assets/l13_chi2_top15.png)
+
+**Reading the figure:** the three features *you handcrafted in L11/L12* -- `digit_count`, `length`,
+`exclam_count` -- all rank in the top five, with `digit_count` and `length` ahead of every one of the 2,000
+vocabulary columns. `digit_count` scores far higher than `free`, the best word. The vocabulary entries that
+do rank high read like a parody of spam: free, txt, claim, www, prize. **Domain insight beat the machinery,
+again.** Keep the top 30 with `SelectKBest(chi2, k=30)` and you hold the spam-indicative core; the bottom of
+the list ("30", "fri", "try") scores `0.000` -- words that fall equally on both classes and carry no
+information.
+
+::: {.callout-warning title="Chi-square needs non-negative features"}
+Chi-square reasons about counts, so columns holding negative values (differences, anything centered at
+zero) break its math and scikit-learn will refuse. Counts, lengths, and 0/1 indicators are all safe; for
+general numeric features, use a different filter score (mutual information, below).
+:::
+
+## Mutual Information
+
+**Mutual information** measures how much knowing a feature's value reduces your uncertainty about the
+label -- the *shared information* between the two. It needs no assumption about counts and catches
+associations a chi-square test can miss (including non-monotonic ones). On the SMS matrix,
+`mutual_info_classif` produces its own ranking: `digit_count` (0.30) and `length` (0.17) on top, then txt,
+exclam_count, free, claim, www, mobile, prize.
+
+The striking part is the agreement. Chi-square and mutual information share no machinery -- one compares
+observed to expected counts, the other measures shared information -- yet of their top ten features, **nine
+are the same**. When two unrelated methods crown the same leaders, that agreement is evidence the leaders
+are real.
+
+## The Filter Blind Spot
+
+Every filter scores each feature **alone**. That is its speed and its weakness: a pair of features that
+carry signal only *together* will both score near zero. The textbook case is an exclusive-or -- imagine two
+0/1 flags where the label is "spam" exactly when the flags *disagree*. Each flag on its own is split 50/50
+across the classes, so chi-square and mutual information both score it `0.000` -- yet the two flags together
+determine the label perfectly. A filter, judging each alone, throws both away.
+
+Catching interactions requires a method that considers features **together** while it works. That is
+exactly what a decision tree does -- and it is the subject of **L14**.
+
+## When to Use Which Filter
+
+- **Variance threshold** -- always a cheap first cut: drop near-constant columns before anything else. It
+  needs no label, but it also cannot tell a useful column from a useless one that happens to vary.
+- **Chi-square** -- the default for **count / non-negative** features against a categorical label (bag of
+  words, indicator flags). Fast, interpretable, model-free triage from thousands to dozens.
+- **Mutual information** -- when features are not counts, or when an association might be non-monotonic; a
+  good second opinion on a chi-square ranking.
+- **Avoid selection entirely** when you already have few features (L10's twelve Ames columns need no
+  triage), or when a regulation or scientific question requires keeping a specific variable regardless of
+  its score.
+
+## Common Pitfalls
+
+- **Selecting on all your data before you split for a model.** A filter ranking is descriptive, but the
+  moment you *feed selected features to a model and grade it* (that is **L14**), the selector must be fit on
+  the training data only -- rank on everything and the test set has already leaked its preferences into the
+  selection. Fit the selector like any other learned step.
+- **Chi-square on negative values.** It needs counts; centered or differenced columns break it. Use mutual
+  information instead.
+- **Reading a ranking as causation.** "digit_count ranks first" means it *separates the classes in this
+  collection*, not that digits cause spam. A spammer who spells out "oh-eight-hundred" defeats the feature
+  without changing the message.
+- **Dropping a redundant twin.** `length` and `digit_count` partly overlap (digit-heavy messages run long).
+  A low-ranked feature may be a casualty of **redundancy**, not uselessness -- drop one twin and the
+  other's score can jump.
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Given a scenario (2,000 features vs 12 features; an explanation is needed), decide whether feature selection is called for and why. 
+- Given a small word-by-class count table, pick the word a chi-square filter ranks highest -- and the one it scores near zero. 
+- Match each filter (variance threshold / chi-square / mutual information) to what it needs and what it does. 
+- A pair of features carries signal only together: what do filters do with them, and which method fixes it? 
+
+## FAQ / Industry Reality
+
+**"Why not just keep all 2,003 features? Storage is cheap."** -- Storage is cheap; *attention* is not.
+Every kept feature is a column someone must compute for every future message, a knob that can drift or
+break, and a chance for a downstream model to learn an accidental pattern. Most of a wide text matrix is
+dead weight being hauled around.
+
+**"Is a filter the best we can do?"** -- No -- it is the fast first pass. Because each feature is scored
+alone, filters miss interactions and double-count redundant features. The next lesson lets a model rank
+features while seeing them together, and the two rankings make a stronger case than either alone.
+
+## Cheat-sheet
+
+| Situation | Move | Call |
+|---|---|---|
+| Columns that barely vary | drop them first (label-free) | `VarianceThreshold(threshold=...)` |
+| Thousands of count features vs a label | chi-square rank, keep top k | `SelectKBest(chi2, k=...)` |
+| Non-count features, or a non-monotonic link | mutual information | `mutual_info_classif` |
+| Need a second opinion on a ranking | run a second, unrelated filter | compare the two top-k lists |
+| About to feed selection to a model | fit the selector on train only | (the L14 discipline) |
+
+## Where to Go Deeper
+
+- **Official docs:** [scikit-learn — Feature selection](https://scikit-learn.org/stable/modules/feature_selection.html) -- VarianceThreshold, chi2, mutual_info_classif, and SelectKBest.
+- **User guide:** [Univariate feature selection](https://scikit-learn.org/stable/modules/feature_selection.html#univariate-feature-selection) -- how the filter scorers plug into `SelectKBest`.
+- **Background:** [Mutual information (Wikipedia)](https://en.wikipedia.org/wiki/Mutual_information) -- the shared-information idea behind the second filter, with the intuition kept light.

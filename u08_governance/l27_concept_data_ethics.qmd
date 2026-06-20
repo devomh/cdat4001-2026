@@ -1,0 +1,227 @@
+---
+title: "Data Ethics & Society"
+unit: "VIII"
+lesson: "27"
+type: concept
+tags: [data-ethics, algorithmic-bias, fairness, privacy, consent, surveillance, governance]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Define** data ethics and **explain** why it goes beyond legal compliance and technical correctness. *(Understand)*
+- **Explain** algorithmic bias -- where it comes from -- and **why** fairness is contested (different fairness criteria can conflict). *(Understand / Analyze)*
+- **Explain** privacy, the limits of informed consent, and **how** re-identification defeats "anonymous" data. *(Understand / Analyze)*
+- **Analyze** a data scenario for its ethical stakes with a simple principle framework, and **take and defend** a position. *(Analyze / Evaluate)*
+
+> **Where this sits:** **Unit VII** closed the technical arc (graphs and communities) · this lesson opens **Unit VIII -- Governance** and turns the course's question from *can we?* to *should we?* · it cashes in the **fairness caveat flagged in L15** · **L28** follows with the *law* that codifies some of these duties.
+
+## Why This Matters
+
+Every technique in this course is **dual-use**. The recommender that surfaces a film you love (Unit VI)
+is the same machinery that can trap someone in a filter bubble. The community detection that finds your
+study group (Unit VII) is the same method that can map a protest network. The classifier you built in
+**L15** to predict income from census features could, with different labels, decide who gets a loan, a
+job interview, or bail. And every one of these began the same way -- data **acquired** from real people
+(L06) and **turned into features** (L11-L12), people who are rarely in the room when the model is built
+and never see the decision it makes about them.
+
+The methods do not arrive with ethics attached -- that part is yours. And the accuracy score, the metric
+you have optimized all semester, is silent on the questions that matter most here:
+
+- **Who is harmed when the model is wrong -- and wrong about *whom*?**
+- **Whose data is this, and did they agree to *this* use of it?**
+- **What power does this system hand to whom?**
+
+**Data ethics** is the discipline of asking those questions *in time* -- before the system ships, not
+after the harm. This lesson works through three tensions where they most often go unasked, each anchored
+in a real case you can look up, and gives you a framework for reasoning about the next one.
+
+## What Is Data Ethics?
+
+**Ethics** is about what we *should* do -- it is distinct from two things it is easily confused with:
+
+- It is **not the same as the law.** The law is the floor (and the subject of L28); plenty that is legal
+  is still wrong, and the law always lags the technology. Ethics asks what you should do even where no
+  statute reaches.
+- It is **not the same as accuracy.** A model can be technically excellent -- high accuracy, clean code,
+  reproducible -- and still cause harm, violate consent, or entrench a power imbalance.
+
+Data work carries unusual ethical weight for three reasons: **scale** (a single model can touch
+millions), **opacity** (those affected often cannot see, question, or appeal the decision), and
+**consequence** (the outputs decide loans, jobs, bail, and what billions of people see). With that reach
+comes responsibility.
+
+## Theme 1 -- Bias and Fairness
+
+A model learns patterns from data. If the data, the labels, or the world they came from are biased, the
+model learns the bias -- and then applies it at scale, with a veneer of mathematical objectivity.
+
+**Where bias enters** is rarely the algorithm itself; it is the pipeline around it:
+
+```{mermaid}
+flowchart LR
+    A[The world<br/>historical inequity] --> B[Training data<br/>who is sampled, who is missing]
+    B --> C[Labels<br/>what 'good' was defined as]
+    C --> D[Model<br/>learns the pattern]
+    D --> E[Decisions<br/>applied at scale]
+    E -->|feedback loop| B
+```
+
+- **Biased data:** if a group is under-represented or recorded differently, the model serves it worse.
+- **Biased labels:** the target itself can encode human prejudice -- "was re-arrested" is not "committed a
+  crime", it is "was policed and caught", which differs by neighbourhood.
+- **Feedback loops:** a model's decisions shape the next round of data (predictive policing sends officers
+  where it predicted crime, which generates more recorded crime *there*, which confirms the prediction).
+
+Three documented cases:
+
+> - **COMPAS** (ProPublica, *Machine Bias*, 2016) -- a widely used recidivism risk score was found to
+>   produce racially disparate error rates: Black defendants who did not re-offend were flagged high-risk
+>   far more often than white defendants who did not re-offend.
+> - **Gender Shades** (Buolamwini & Gebru, 2018) -- commercial face-classification systems were far less
+>   accurate on darker-skinned women than on lighter-skinned men, because the benchmark data was skewed.
+> - **Amazon's recruiting tool** (2018, scrapped) -- trained on a decade of mostly-male resumes, it learned
+>   to down-rank resumes that contained the word "women's" (as in "women's chess club captain").
+
+**Fairness is contested.** There is no single definition. Should a model have equal *error rates* across
+groups, or equal *positive-prediction rates*, or treat *similar individuals* similarly? These sound
+compatible but are not: when base rates differ between groups, it is mathematically impossible to satisfy
+several reasonable fairness criteria at once (this was the core of the COMPAS debate). "Make it fair" is
+therefore not a setting you toggle -- it is a value judgment about *which* fairness you mean, made in the
+open, with the affected people in mind.
+
+> **The L15 callback.** In the data-mining mini-project you trained a classifier on census data to predict
+> income, and we flagged that its predictions are *associational* and *fairness-laden*. Now you can name
+> why: the features (occupation, hours, education) correlate with protected attributes, the label reflects
+> a historically unequal economy, and "accurate" says nothing about "fair". That flag was pointing here.
+
+## Theme 2 -- Privacy and Consent
+
+**Privacy** is not secrecy; it is *control over information about yourself*. Two ideas do most of the work:
+
+- **Informed consent and its limits.** The ethical default is that people agree to how their data is used.
+  But consent at data scale is thin: nobody reads the terms, "I agree" is a precondition of using the
+  service, and no checkbox can anticipate every *future* use of data collected today. Real consent is
+  specific and revocable; most data consent is neither.
+- **Re-identification: anonymization is not deletion.** Stripping names does not make data anonymous,
+  because *combinations* of ordinary attributes are unique, and separate datasets can be *linked*.
+
+> - **Netflix Prize de-anonymization** (Narayanan & Shmatikov, 2008) -- Netflix released 100M "anonymous"
+>   movie ratings for a contest; researchers re-identified users by matching rating patterns to public
+>   IMDb reviews.
+> - **Latanya Sweeney** showed that **ZIP code + birth date + sex** uniquely identifies a large share of
+>   the US population, and used it to pull the Governor of Massachusetts's medical record out of an
+>   "anonymized" hospital release -- the work that motivated *k*-anonymity.
+> - **The AOL search-log release** (2006) -- "anonymized" search histories were published; journalists
+>   identified individuals from the content of their own queries within days.
+
+The lesson: **aggregation and linkage defeat naive anonymization.** Collecting less, and assuming any
+release can be linked, is safer than trusting that removing names is enough.
+
+## Theme 3 -- Surveillance and Power
+
+Data is **power**, and it is usually *asymmetric*: the organization sees the individual in fine detail,
+while the individual cannot see, question, or opt out of the organization. Scaled up, routine data
+collection becomes **surveillance** -- and surveillance shapes behaviour (people self-censor when watched)
+and concentrates power.
+
+> - **Cambridge Analytica / Facebook** (2018) -- the data of tens of millions of users was harvested
+>   through a personality quiz (and their friends' data, without those friends' knowledge) and used to
+>   build profiles for political ad targeting -- consent that was meaningless at the point it mattered.
+> - **"Surveillance capitalism"** (Zuboff, named) describes a business model in which human experience is
+>   raw material for behavioural prediction; **predictive policing** turns past enforcement into future
+>   suspicion. Both are power-asymmetry stories before they are technology stories.
+
+## A Framework for Reasoning
+
+You will not memorize the right answer to every case -- there isn't one. Instead, carry a small set of
+principles and run them on each project. A compact, widely used set:
+
+- **Respect for persons** -- people are not just data points; consent and autonomy matter.
+- **Beneficence** -- maximize benefit, minimize harm; ask who bears each.
+- **Justice** -- distribute benefits and harms fairly; watch who is made worse off.
+- **Transparency and accountability** -- can the decision be explained, contested, and owned by someone?
+
+Two lenses help when principles tension: a **consequences** lens (what outcomes does this produce, for
+whom?) and a **duties** lens (what do we owe these people regardless of outcome?). When they disagree, you
+have found the hard part of the problem -- name it rather than hide it.
+
+A four-question checklist for any data project:
+
+1. **Whose data is this, and did they meaningfully agree to this use?**
+2. **Who is harmed if the system is wrong -- and is that harm spread evenly?**
+3. **Could the outputs be re-identified, linked, or repurposed beyond the intent?**
+4. **Who gains power from this system, and who can contest its decisions?**
+
+## Your Responsibility
+
+Ethics is **part of the job**, not a compliance box checked at the end by someone else. The data scientist
+is often the only person who understands *how* the system actually works, which makes you the person best
+positioned -- and obligated -- to raise the hard question early. Concretely: ask these questions at design
+time, **document** the data's provenance and the model's known limits, build in ways to **audit and
+contest** decisions, and be willing to **push back** on a use you cannot defend. "I just built the model"
+is not a place to stand.
+
+> **Forward to L28.** Some of these duties are now **law**. The next lesson covers the regulations and
+> standards that codify privacy, consent, and accountability -- GDPR, HIPAA, FERPA, and the Puerto Rico /
+> US context -- and how to apply one to a real data-handling scenario. Ethics is what you should do; law is
+> where society made part of it mandatory.
+
+## Discussion Prompts
+
+No single right answer -- argue from the framework, and say which principle you are weighing.
+
+1. **Bias.** A bank's loan model is more accurate overall when it *includes* ZIP code, but ZIP code
+   correlates strongly with race. Drop it (and lose accuracy) or keep it (and risk a discriminatory
+   proxy)? What would you need to know to decide?
+2. **Privacy.** A university wants to predict which students will drop out, using login logs, card swipes,
+   and grades, to offer help early. Helpful intervention or unconsented surveillance? What would make it
+   ethical?
+3. **Consent / public data.** Researchers scrape millions of *public* social-media profiles to study
+   mental health. The data is public -- does that make any use of it fair? Who should have a say?
+4. **Power.** A city deploys predictive policing trained on historical arrest data. Trace the feedback
+   loop. Who benefits, who is harmed, and who can contest a patrol decision?
+
+## Quiz Hooks
+
+- What data ethics is, and how it differs from legality and from technical accuracy. *(Understand, MC)* 
+- Why data work carries special ethical weight (scale, opacity, consequence). *(Understand, MC)* 
+- Sources of algorithmic bias (biased data, biased labels, feedback loops) -- identify one in a scenario. *(Understand / Apply, MC)* 
+- Why "fairness" is contested: different fairness criteria can conflict, so it is a value judgment, not a toggle. *(Analyze, MC)* 
+- What re-identification shows: anonymization is not deletion (aggregation + linkage). *(Understand / Analyze, MC)* 
+- Reasoning about a scenario with the principle framework / four-question checklist -- pick the soundest ethical analysis. *(Analyze / Evaluate, MC)* 
+
+## FAQ
+
+**Isn't following the law enough?**
+No. The law is the floor and it lags the technology; much that is legal is still harmful or unjust. Ethics
+asks what you should do, including where no law yet reaches. (L28 covers what the law *does* require.)
+
+**If the data is public, is it fair game for any use?**
+Not automatically. People share in one context expecting one use; harvesting it at scale for a different
+purpose (profiling, training, re-identification) can violate the reasonable expectation under which it was
+shared. "Public" is about access, not consent to every downstream use.
+
+**Can't we just remove the sensitive attribute (race, sex) to make the model fair?**
+No -- this is "fairness through unawareness", and it usually fails. Other features act as **proxies** (ZIP
+code for race, first name for sex), so the model reconstructs the attribute and the disparity persists,
+now harder to detect. Fairness requires measuring outcomes across groups, not hiding the variable.
+
+**Whose job is the ethics -- isn't there a compliance team for that?**
+Compliance handles the legal minimum after the fact. The person who built the system understands it best
+and is best placed to catch problems at design time. Ethics is shared, but it is not someone else's
+problem.
+
+## Where to Go Deeper
+
+- **ProPublica, "Machine Bias" (2016)** -- the COMPAS investigation, with the data and methodology.
+- **Buolamwini & Gebru, "Gender Shades" (2018)** -- the facial-analysis accuracy audit (gendershades.org).
+- **Cathy O'Neil, *Weapons of Math Destruction* (2016)** -- accessible cases of harmful models at scale.
+- **Barocas, Hardt & Narayanan, *Fairness and Machine Learning*** -- the standard text, free at
+  fairmlbook.org (start with the introduction and the chapter on classification).
+- **The Belmont Report (1979)** -- the origin of the respect / beneficence / justice principles, written
+  for human-subjects research and still the backbone of data ethics.

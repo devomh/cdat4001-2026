@@ -1,0 +1,184 @@
+---
+title: "Content-, Knowledge- & Demographic-Based Recommenders"
+unit: "VI"
+lesson: "23"
+type: concept
+tags: [recommender-systems, content-based, demographic, knowledge-based, hybrid, evaluation]
+difficulty: intermediate
+duration: "35 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Build** a content-based recommender from item features (genre vectors + cosine) and **explain** its over-specialization limit. *(Apply)*
+- **Distinguish** content-based, demographic, and knowledge-based filtering by the information each needs, and **map** each to the cold-start gap it closes. *(Understand / Analyze)*
+- **Explain** hybrid recommenders (switching vs. weighted) and why every large platform ships one. *(Understand)*
+- **Evaluate** a recommender on a held-out split with **RMSE** and **MAE**, and **read** the accuracy ladder. *(Apply / Analyze)*
+- **Distinguish** rating-prediction error from top-N ranking quality (precision@k). *(Understand)*
+
+> **Where this sits:** **L22** built collaborative filtering and hit two walls -- the **cold-start** problem and "are these recommendations any *good*?" · this lesson answers both: the families that need no rating history, and the held-out test that turns "looks plausible" into a number · **L24** is the mini-project that puts it all together.
+
+> **Hands-on:** [Lab — The Other Recommenders, and How to Score Them](l23_lab_content_based_recommenders.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u06_recommender_systems/l23_lab_content_based_recommenders.ipynb)
+
+## Why This Matters
+
+L22 left two questions open. First, collaborative filtering is **blind to anyone new**: a brand-new
+user has no ratings to find neighbors from, and a brand-new movie has no ratings to be a neighbor --
+the **cold-start** problem. Second, the top-N lists *looked* reasonable, but looking reasonable is not
+a measurement. This lesson supplies the rest of the recommender family -- the approaches that work with
+*no* rating history -- and the discipline that tells you whether any recommender is actually any good.
+
+## Content-Based Filtering
+
+Collaborative filtering ignored *what* an item is. **Content-based filtering** does the opposite: it
+recommends items whose **features** match the ones you liked. MovieLens tags every movie with 19
+**genre** flags, so each movie is a 0/1 vector in "genre space." Build a user's **content profile** by
+adding up the genre vectors of the movies they rated, weighted by how far above their own average each
+rating was -- the genres they reliably like come out large and positive, the ones they dislike go
+negative. Then score every unseen movie by the **cosine similarity** (L18) between its genre vector and
+that profile.
+
+![A horizontal bar chart of user 196's content profile across the 19 genres. Drama sticks out far to the right at about +5.2; Children, Fantasy, and Documentary are small and positive; Action at about -5.8, Adventure, Romance, Comedy, Sci-Fi, and War are negative. The chart shows one dominant liked genre and several disliked ones.](assets/l23_genre_profile.png)
+
+The strength: content-based handles a **brand-new item** fine -- a movie just added still has genres,
+even with zero ratings. The weakness, which you will see directly in the lab: **over-specialization**.
+A Drama lover gets a list of nothing but Dramas; the method keeps serving the same flavor and rarely
+surprises you. (Genres are also a coarse feature, so many movies tie on similarity -- the lab breaks
+ties by popularity.)
+
+## Demographic Filtering
+
+**Demographic filtering** recommends by *who you are*. MovieLens ships real attributes in `u.user` --
+age, gender, occupation -- so you can ask "what do women aged 25-34 rate highest?" and recommend that
+to a new member of that cohort. It needs **no ratings from the target user at all**, which is exactly
+why it can greet a brand-new user the moment they sign up. The cost is bluntness: everyone in a cohort
+gets the same suggestions, and grouping people by demographics raises fairness questions (a theme for
+Unit VIII).
+
+## Knowledge-Based Filtering
+
+**Knowledge-based filtering** skips history entirely and works from **stated rules and constraints**.
+A travel site that asks your dates, budget, and climate, then applies rules to filter the catalog, is
+recommending without a single past rating. In the lab you build a tiny version: "a highly-rated Comedy
+from the 1990s" is a rule (genre = Comedy, year in the 90s, mean rating high enough, enough ratings to
+trust). Knowledge-based systems shine for **rare, high-stakes, or first-time** purchases -- a house, a
+mortgage, a laptop -- where nobody has a rating history and the user can state what they need.
+
+## Hybrid Recommenders
+
+No single family wins everywhere, so real systems **combine** them -- a **hybrid**:
+
+- **Switching** -- use one approach until another becomes possible: greet a new user with demographic
+  or popular picks, then **switch** to collaborative filtering once they have rated enough.
+- **Weighted** -- **blend** several scores into one (e.g. average a content score and a collaborative
+  score), so each covers the other's blind spots.
+
+Every large platform ships a hybrid: it is the only way to be good for new users, new items, *and*
+seasoned users at once.
+
+## Cold Start, Resolved
+
+Now the L22 table can be completed -- the *fix* for each gap is just "use a family that does not need
+that history":
+
+| Approach | Needs | New user | New item |
+|----------|-------|----------|----------|
+| **Collaborative filtering** | a ratings matrix | fails (no neighbors) | fails (no raters) |
+| **Content-based** | item features | needs a few likes first | **works** (new item has features) |
+| **Demographic** | user attributes | **works** (no ratings needed) | not applicable |
+| **Knowledge-based** | stated rules | **works** (asks directly) | **works** |
+| **Hybrid** | a mix | **works** (switch / blend) | **works** |
+
+The standard playbook: start a new account with **demographic / popular** picks, lean on
+**content-based** for fresh items, and shift to **collaborative filtering** as real ratings accumulate.
+
+## How to Evaluate a Recommender
+
+A list that looks plausible can still be wrong. To *measure* a recommender, hide some of the known
+ratings (a **train/test split**, exactly as in L11), predict them, and compare the predictions with the
+truth using two standard error metrics:
+
+$$\text{RMSE} = \sqrt{\tfrac{1}{n}\sum (\hat r - r)^2}, \qquad \text{MAE} = \tfrac{1}{n}\sum \lvert \hat r - r \rvert$$
+
+**RMSE** (root mean squared error) squares each miss, so it punishes big misses hardest; **MAE** (mean
+absolute error) is the plain average miss, in stars. Lower is better for both. Run them on the methods
+you built in L22 and a clear **accuracy ladder** appears:
+
+![A bar chart titled "Each idea predicts ratings a little better." Four bars of test RMSE, lower being better: global mean 1.124 and item mean 1.021 in gray as simple baselines, item-item collaborative filtering 0.945 in blue, and matrix factorization 0.922 in green. The bars step downward from left to right; an annotation marks CF and matrix factorization as the methods built in L22.](assets/l23_rmse_ladder.png)
+
+**Reading the output:** each idea beats the one before. Knowing the global average already gets you to
+1.124; knowing *which movie* (item mean) helps; knowing how *similar users or movies* rate (collaborative
+filtering) helps more; and **matrix factorization** -- the Netflix-Prize family from L22, here with 20
+latent factors per user and movie -- wins at **0.922**. This is the ladder behind that \$1M prize.
+
+## Rating Error vs. Ranking Quality
+
+One honest caveat. RMSE and MAE score how well you predict a *rating*, but what a user actually
+experiences is the *ranking* -- did the right items reach the top of the list? A model can shave RMSE
+yet reorder the top 10 for the worse. Ranking is measured differently, with metrics like
+**precision@k** (of the top k you showed, how many did the user like?). We name it here and use a
+ranking lens in the L24 project; the key idea is that **predicting ratings well and ranking items well
+are related but not the same goal.**
+
+## FAQ / Industry Reality
+
+**"Which approach is best?"** None alone -- the right answer is almost always a **hybrid**. The
+interesting question is not "which method" but "which method *for which situation*" (new user, new item,
+rich history).
+
+**"Isn't more data enough?"** More ratings help collaborative filtering, but they do nothing for a user
+who has rated *nothing* -- cold start is a structural gap, not a volume problem -- and they cannot fix a
+mismatch between optimizing RMSE and optimizing what users actually want.
+
+**"Is offline RMSE the final word?"** No. Offline metrics are how you *screen* ideas cheaply; the real
+test is an **online A/B test** on live users, because recommendations change the very behavior you
+measure. (Online evaluation is beyond this course; we name it so you know the offline number is a
+start, not the verdict.)
+
+## Ethics
+
+Demographic filtering groups people by age, gender, or region -- convenient, but it can encode and
+amplify bias, and "people like you" can quietly become "people boxed in like you." Content-based
+over-specialization is how **filter bubbles** form. Optimizing a single offline number (watch time,
+clicks) is how engagement-at-any-cost systems arise. **Unit VIII** takes these up directly.
+
+## Key Takeaways
+
+- **Content-based** uses item features (genres), handles new items, but over-specializes.
+- **Demographic** uses user attributes and **demographic** / **knowledge-based** approaches need no
+  rating history -- they cover the **cold start** that breaks collaborative filtering.
+- **Hybrid** systems (switching or weighted) combine families to be good for new users, new items, and
+  veterans at once -- what every platform ships.
+- **Evaluate** with a held-out split: **RMSE** (punishes big misses) and **MAE** (average miss). The
+  ladder: popularity -> item -> collaborative filtering -> matrix factorization, each a little better.
+- **RMSE/MAE measure rating prediction; ranking quality (precision@k) is a related but different goal.**
+
+## Cheat-sheet
+
+| Task | Idea |
+|---|---|
+| Content profile | rating-weighted sum of the liked items' feature vectors |
+| Content score | cosine(profile, item-feature vector) |
+| Demographic pick | top-rated items within a user cohort (`groupby` attributes) |
+| Knowledge-based pick | filter the catalog by stated rules (genre, year, min rating) |
+| Hybrid | switch between families, or blend their scores |
+| Evaluate | `train_test_split`, then RMSE \( \sqrt{\text{mean}((\hat r - r)^2)} \) and MAE |
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Match a recommender family (content / demographic / knowledge-based) to the information it needs or the cold-start gap it closes 
+- Identify the content-based mechanism (cosine between a user's feature profile and an item's features) and its over-specialization limit 
+- Read the accuracy ladder / contrast RMSE vs MAE (which method predicts best; what RMSE punishes) 
+- Explain a hybrid recommender (switching vs weighted) and why platforms use one 
+- Distinguish rating-prediction error (RMSE/MAE) from top-N ranking quality (precision@k) 
+
+## Where to Go Deeper
+
+- **Survey:** [Microsoft Recommenders (GitHub)](https://github.com/recommenders-team/recommenders) -- production-grade examples of content, collaborative, and hybrid recommenders with evaluation.
+- **Evaluation:** [scikit-learn — Model evaluation](https://scikit-learn.org/stable/modules/model_evaluation.html) -- RMSE/MAE and the broader metric landscape (ranking metrics included).
+- **Hybrids:** R. Burke (2002). *Hybrid Recommender Systems: Survey and Experiments.* User Modeling and User-Adapted Interaction -- the classic taxonomy of switching/weighted/cascade hybrids.

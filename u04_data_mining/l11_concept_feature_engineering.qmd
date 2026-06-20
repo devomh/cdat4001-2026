@@ -1,0 +1,244 @@
+---
+title: "From Raw Data to Features"
+unit: "IV"
+lesson: "11"
+type: concept
+tags: [feature-engineering, one-hot-encoding, scaling, binning, date-features, data-mining]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Explain** what a feature is and why every analysis needs an all-numeric feature matrix `X`. *(Understand)*
+- **Encode** a categorical column with one-hot, and **judge** when one-hot is the wrong move. *(Apply / Analyze)*
+- **Scale** numeric features by standardizing or min-max, and **say** which algorithms need it and why. *(Apply / Understand)*
+- **Derive** new features: bin a continuous column and pull the parts out of a date. *(Apply)*
+- **Decide** whether a proposed feature is legitimate or secretly leaks the answer. *(Evaluate)*
+
+> **Hands-on:** [Lab — Engineering Features from the Ames Homes](l11_lab_feature_engineering.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u04_data_mining/l11_lab_feature_engineering.ipynb)
+
+> **Where this sits:** after **L10 — the EDA Mini-Project** closed Unit III · opens **Unit IV** (extracting information from data) · next, **L12** takes this same idea to the hardest raw input of all -- free text.
+
+## Why This Matters
+
+In L10 you *explored* the Ames homes -- read their distributions, compared neighborhoods by eye. An
+algorithm cannot do any of that with the table as it sits. It cannot consume `Neighborhood = "CollgCr"`;
+it cannot tell that a `YearBuilt` of 2003 means "almost new"; and if you hand it `LotArea` (in the ten
+thousands) next to `FullBath` (zero to three), it will treat the lot size as thousands of times more
+important purely because the numbers are bigger.
+
+Between a tidy table you can *read* and a matrix an algorithm can *use* sits one job: **feature
+engineering** -- deciding what to measure and putting every measurement into comparable numbers. A line
+widely attributed to the machine-learning researcher Andrew Ng puts it bluntly: *"Applied machine learning
+is basically feature engineering."* Units I--III taught you to store, fetch, and explore data. Unit IV is
+about *mining information* from it, and that starts here, by building the columns the rest of the unit will
+mine.
+
+## What Is a Feature?
+
+> **Analogy:** a doctor cannot put "the patient" into a formula. She measures things *about* the patient --
+> temperature, blood pressure, heart rate -- and works with those numbers. The measurements are the
+> features; the patient is the raw data.
+
+A **feature** is a measurable property of an observation, expressed as a number (or something convertible
+to one). Stack them in a table -- one row per observation, one column per feature -- and you have a
+**feature matrix**, conventionally called `X`:
+
+| | GrLivArea | age | style_2Story | nb_CollgCr |
+|---|---|---|---|---|
+| house 1 | 1710 | 7 | 1 | 1 |
+| house 2 | 1262 | 34 | 0 | 0 |
+| house 3 | 1786 | 9 | 1 | 1 |
+
+This is exactly the tidy-table shape from Unit III, with one new demand: **every column must end up
+numeric**. L07's variable taxonomy still governs what each column *means* -- continuous, discrete,
+ordinal, nominal -- but algorithms consume numbers, so every raw input (a category name, a year, a date,
+a sentence) needs a defined path into `X`. The four paths this lesson covers, by raw type:
+
+- **Nominal category** (`HouseStyle`, `Neighborhood`) -- one-hot encode.
+- **Numeric on an odd scale** (`LotArea`, `GrLivArea`) -- standardize or min-max.
+- **Continuous you want as groups** (`YearBuilt`) -- bin it.
+- **A date or year** -- derive parts (age, month, day-of-week).
+
+Sometimes the work is already done: `OverallQual` arrives as an integer 1--10 that *encodes its own order*
+-- it is a usable feature as-is, and one-hot encoding it would throw the ordering away.
+
+## Encoding Categoricals: One-Hot
+
+An algorithm cannot read `"2Story"`. The temptation is to map the categories to `1, 2, 3, ...` -- but that
+invents an order and a spacing that are not real (`SLvl` is not "three times" `1Story`). **One-hot
+encoding** avoids the lie: one new 0/1 column per category value, exactly one of them hot per row.
+
+| HouseStyle | | style_1Story | style_2Story | style_SLvl |
+|---|---|---|---|---|
+| 2Story | becomes | 0 | 1 | 0 |
+| 1Story | | 1 | 0 | 0 |
+| SLvl | | 0 | 0 | 1 |
+
+In pandas it is one call -- `pd.get_dummies(df["HouseStyle"], prefix="style", dtype=int)`. On the real
+Ames data, `HouseStyle` has **8** distinct values (the real list includes half-story variants like
+`1.5Fin`, not just the three shown above), so it expands into **8** clean 0/1 columns. So far so good.
+
+::: {.callout-warning title="When one-hot explodes"}
+One column per value is fine for `HouseStyle` (8 values). It is a disaster for high-cardinality columns.
+`Neighborhood` has **25** values -- one-hot turns one column into **25**, most of them almost all zeros.
+Push that to a real ID column (customer IDs, product codes, with thousands of values) and the matrix gains
+thousands of nearly-empty columns. High-cardinality categoricals need other strategies -- the simplest is
+to group the rare values into a single `"Other"` bucket before encoding.
+:::
+
+## Scaling Numerics: Putting Columns on One Footing
+
+Raw numeric columns live on wildly different scales. In Ames, `LotArea` averages about **10,517** while
+`FullBath` ranges **0--3**. Many core algorithms -- anything that measures **distance** between rows
+(clustering, nearest neighbors, PCA in L20) or follows a **gradient** -- read a bigger spread as "more
+important." Left raw, `LotArea` would dominate `FullBath` for no reason but its units. **Scaling** removes
+that accident.
+
+Two standard moves:
+
+**Standardization (z-score)** -- recenter to mean 0, rescale to standard deviation 1:
+
+$$
+z = \frac{x - \mu}{\sigma}
+$$
+
+In pandas that is `(x - x.mean()) / x.std(ddof=0)`. Standardize Ames `GrLivArea` and the column comes out
+with **mean 0.0** and **std 1.0**; its first three values become `0.3703, -0.4825, 0.515` -- a home a
+third of a standard deviation above average, one half a deviation below, one half above. The numbers are
+now comparable across columns.
+
+**Min-max normalization** -- squeeze the column into the range `[0, 1]`:
+
+$$
+x' = \frac{x - x_{\min}}{x_{\max} - x_{\min}}
+$$
+
+The same `GrLivArea` then runs from exactly **0.0** (the smallest home) to **1.0** (the largest). Use
+min-max when you want a bounded range; use standardization when the spread (in standard deviations) is what
+matters. Either way you compute the recipe **once** and apply the *same* recipe everywhere -- which is
+precisely what scikit-learn's transformers do:
+
+```python
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(df[["GrLivArea"]])   # same z-scores: 0.3703, -0.4825, 0.515
+```
+
+`fit` learns the mean and std from the data; `transform` applies them. This **fit/transform** pattern is
+the backbone of the rest of the unit -- you will meet it again for feature selection (L13) and for the
+models in L14--L15.
+
+::: {.callout-note collapse="true" title="Deep Dive: ddof, and why hand-rolled and library z-scores can differ (optional)"}
+`StandardScaler` divides by the **population** standard deviation (`ddof=0`). Pandas' `.std()` defaults to
+the **sample** standard deviation (`ddof=1`, dividing by `n-1`). For `n = 1460` the two differ by about
+0.03% -- invisible until the last decimal -- but it is why a from-scratch z-score can disagree with a
+library one in the final digits. We pass `ddof=0` above so the pandas formula and `StandardScaler` agree
+exactly. The choice never matters for the *purpose* of scaling; it matters only when you compare two
+implementations digit for digit.
+:::
+
+## Binning and Derived Features
+
+Not every useful feature is a copy of a raw column. Two everyday moves invent new ones.
+
+**Binning (discretization)** turns a continuous column into ordered groups. `pd.cut` slices on
+fixed-width edges; `pd.qcut` slices on quantiles so each group holds about the same number of rows. Cut
+`YearBuilt` into decades and you trade 112 distinct build years for a handful of human-meaningful eras --
+the "built in the 2000s" group alone holds **364** of the 1,460 homes. Binning can also tame outliers and
+expose a non-straight-line pattern, at the cost of throwing away within-bin detail.
+
+**Derived features** combine or transform columns into something more informative than either part:
+
+- A **date or year** rarely helps as a raw number; its *parts* do. From `YearBuilt`, derive
+  `age = 2010 - YearBuilt` (2010 is the year the data was collected): now the column means "how old,"
+  which is what actually drives price. On the Ames homes that `age` averages about **38.7** years and runs
+  from **0** to **138**.
+- A true **timestamp** carries even more. From a `datetime`, `pandas` pulls the parts directly:
+
+| ts | .dt.year | .dt.month | .dt.dayofweek | is_weekend |
+|---|---|---|---|---|
+| 2021-03-15 | 2021 | 3 | 0 | False |
+| 2021-07-04 | 2021 | 7 | 6 | True |
+| 2021-12-25 | 2021 | 12 | 5 | True |
+
+  `dayofweek` runs Monday `0` to Sunday `6`, so `dayofweek >= 5` flags a weekend -- one line that often
+  carries more signal than the raw date ever could.
+
+- **Ratios and differences** that encode domain insight: `rooms_per_floor`, `lot-to-living-area`. A good
+  derived feature packs knowledge the algorithm would otherwise have to rediscover.
+
+## What Makes a Feature Useful
+
+Engineering features is easy; engineering *good* ones is the skill. Four quick tests:
+
+1. **Informative** -- it actually varies with what you care about. A column that is the same for every row
+   teaches nothing.
+2. **Not redundant** -- it adds something the other features do not already carry. (L13 makes "redundant"
+   precise and removes it.)
+3. **Computable when you need it** -- you can produce its value for a *new* observation at the moment you
+   must act, not only in hindsight.
+4. **It does not leak the label.** This is the one that bites. A feature that secretly encodes the answer
+   gives perfect results in testing and fails completely in the wild.
+
+> **The leak test:** if you could only compute this feature *because you already know the outcome*, it is a
+> leak. `price_per_sqft` built from `SalePrice` predicts `SalePrice` flawlessly and is useless -- it *is*
+> the target in disguise. `rooms_per_floor` is fine: you can measure it for a house that has not sold.
+
+## Common Pitfalls
+
+- **Scaling with statistics from the whole dataset before splitting.** The mean and std must be learned
+  from training data only; learning them from data you will later test on leaks information. (You will set
+  up proper splits in L15.)
+- **One-hot on a high-cardinality column.** Thousands of near-empty columns slow everything and help
+  nothing. Group rare values first.
+- **Binning away the signal.** Too few bins erase a real trend; bins drawn to flatter the story are a
+  classic way to mislead. Bin for a reason, and keep the raw column when in doubt.
+- **Inventing a feature that encodes the label.** The single most common cause of a model that looks
+  perfect in the notebook and collapses in production. Always ask: could I compute this *before* I knew the
+  answer?
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Given a raw column and a goal, pick the legitimate feature -- and spot the one that leaks the label. 
+- Given a nominal column and an already-ordinal column, choose the right encoding for each. 
+- Why (and for which algorithms) does scaling matter -- and which two recipes put columns on one footing? 
+- Read a one-hot before/after column count: which column is heading for the high-cardinality trap? 
+- Decide when to bin a continuous column versus keep it raw, and what `qcut` guarantees that `cut` does not. 
+
+## FAQ / Industry Reality
+
+**"Isn't this just data cleaning from Unit I?"** -- Cleaning makes the data *correct* (fix types, fill
+missing values); feature engineering makes it *useful* (invent the columns worth measuring). You clean
+first, then engineer. They are different jobs with different goals.
+
+**"Do modern AI models make feature engineering obsolete?"** -- They automate part of it: deep models
+*learn* representations instead of being handed engineered ones. But most professional data work is
+tabular, modest in size, and must be explained on demand -- and there, engineered features still dominate.
+Even cutting-edge pipelines begin with a human deciding what raw signal is worth measuring. The judgment
+this lesson teaches does not expire with the tooling.
+
+## Cheat-sheet
+
+| Raw situation | Feature move | Call |
+|---|---|---|
+| Nominal category, few values | one-hot encode | `pd.get_dummies(..., dtype=int)` |
+| Nominal category, hundreds of values | group rare values, then encode | `value_counts` + mapping |
+| Already an ordered number | leave it alone | -- (it is a feature) |
+| Numeric on an odd scale | standardize | `StandardScaler` / `(x-mean)/std` |
+| Numeric, want a bounded range | min-max | `(x-min)/(max-min)` |
+| Continuous you want as groups | bin it | `pd.cut` (width) / `pd.qcut` (count) |
+| A year or date | derive parts (age, month, weekday) | `2010 - year`, `.dt.*` |
+| Two columns imply a better one | derive it (ratio, difference) | plain pandas |
+
+## Where to Go Deeper
+
+- **Official docs:** [scikit-learn — Preprocessing data](https://scikit-learn.org/stable/modules/preprocessing.html) -- the encoders and scalers this lesson uses, with the fit/transform API.
+- **Book chapter:** [Python Data Science Handbook — Feature Engineering](https://jakevdp.github.io/PythonDataScienceHandbook/05.04-feature-engineering.html) (VanderPlas) -- one-hot, derived, and text features in a few pages.
+- **pandas guide:** [Categorical data & `cut`/`qcut`](https://pandas.pydata.org/docs/user_guide/categorical.html) -- binning and category handling in depth.

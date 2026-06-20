@@ -1,0 +1,220 @@
+---
+title: "Feature Selection II: Trees & Random Forests"
+unit: "IV"
+lesson: "14"
+type: concept
+tags: [feature-selection, decision-trees, random-forests, feature-importance, classification, data-mining]
+difficulty: introductory
+duration: "75 mins"
+---
+
+## Learning Objectives
+
+By the end of this lesson you will be able to:
+
+- **Explain** the honest yardstick -- a train/test split and accuracy read against a majority baseline. *(Understand)*
+- **Train** a shallow decision tree, **read** its splits in plain language, and **see** it select features. *(Apply / Analyze)*
+- **Compare** the accuracy of a selected feature set against the full matrix and the baseline. *(Analyze)*
+- **Describe** how a random forest aggregates trees, and **judge** the accuracy-versus-readability trade. *(Understand / Evaluate)*
+
+> **Hands-on:** [Lab — From 2,003 Features to a Rule You Can Read Aloud](l14_lab_feature_selection_trees.md) ·
+> [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u04_data_mining/l14_lab_feature_selection_trees.ipynb)
+
+> **Where this sits:** after **L13** ranked features with model-free filters · this lesson lets a *model* select features while seeing them together · **closes Unit IV** -- the data-mining mini-project (**L15**) puts the whole loop to work next.
+
+## Why This Matters
+
+L13's filters scored every one of 2,003 features *alone*, and that was their blind spot: a pair of features
+that carry signal only *together* both scored near zero. A **decision tree** fixes exactly that. It asks one
+question at a time, and each question is chosen *given* the answers above it -- so it sees features in
+combination. Better still, it selects features for free: **the features it spends its questions on are the
+selection.** By the end of the lab, a rule small enough to read aloud -- three questions about a message --
+classifies spam almost as well as all 2,003 columns, and you will know precisely *which* features earned
+their place.
+
+## A Short Detour: Teaching the Machine to Decide
+
+This is the course's first contact with **supervised classification**, and we take just enough of it to
+score and select feature sets -- five terms:
+
+- The **label** is the answer column -- `ham` or `spam`, known for every message we learn from. *Supervised*
+  means the answers are known for the training data.
+- A **classifier** is an algorithm that learns, from labeled examples, a rule mapping a feature vector to a
+  predicted label. The two verbs are `fit` (learn from examples) and `predict` (apply the rule to new ones).
+- A **train/test split** divides the data -- typically 70% for fitting, 30% held back for testing. The rule
+  is graded **only on messages it never saw**, like an exam of questions that were not on the study guide.
+  Grading on the training data rewards memorization, which does not transfer.
+- **Accuracy** is the fraction of test messages classified correctly.
+- A **baseline** is the accuracy of the laziest strategy. Our data is 13.4% spam, so "predict *ham* for
+  everything" already scores **86.6%**.
+
+::: {.callout-important title="Accuracy starts at the baseline, not at zero"}
+On imbalanced classes, quote the majority-class baseline next to any accuracy. A spam filter scoring 90%
+sounds impressive until you know that doing *nothing* scores 86.6%. The interesting quantity is the distance
+*above the baseline*, not above zero.
+:::
+
+That is the whole detour. Now we can let a model select features -- starting with one you can read.
+
+## Decision Trees: Selection by Questioning
+
+A **decision tree** classifies by asking a sequence of yes/no questions about the features, one per
+**node**, until it reaches a **leaf** that names a class. Here is a tree a human might build for six toy
+messages:
+
+| message | digit_count | contains "prize" | label |
+|---|---|---|---|
+| "ok see you at 5" | 1 | no | ham |
+| "running late sorry" | 0 | no | ham |
+| "FREE prize waiting claim now" | 0 | yes | spam |
+| "call 09061701461 to collect" | 11 | no | spam |
+| "are you free for lunch" | 0 | no | ham |
+| "win cash text WIN to 81010" | 5 | no | spam |
+
+```{mermaid}
+flowchart TD
+    A{"digit_count &gt; 4 ?"} -->|yes| B["spam (2 of 2 correct)"]
+    A -->|no| C{"contains 'prize' ?"}
+    C -->|yes| D["spam (1 of 1 correct)"]
+    C -->|no| E["ham (3 of 3 correct)"]
+```
+
+**Reading the tree:** the root question alone (`digit_count > 4?`) captures the two number-stuffed spam
+messages; one more question (`contains "prize"?`) catches the digit-free spam. Notice the tree did *not*
+ask about "free", even though it is spam-flavored -- "are you free for lunch" is ham, so on these six
+messages "free" misfires where "prize" does not. The tree found that out by itself.
+
+How? At each node the algorithm tries **every feature and every threshold** and keeps the question whose
+answer best separates the classes -- the split that leaves the two resulting groups as *pure* (single-class)
+as possible. Then it repeats inside each group until the groups are pure or a **depth** limit stops it.
+Depth is the honesty knob: a depth-3 tree asks at most three questions per message, so whatever it learns
+must fit in three questions. And that makes the tree a feature selector for free: **the features in its
+nodes are the selection.**
+
+::: {.callout-note collapse="true" title="Deep Dive: how 'purity' is measured (optional)"}
+The standard purity score is **entropy**: $H = -\sum_i p_i \log_2 p_i$, summed over the classes. A group
+that is all one class has $H = 0$ (perfectly pure); a 50/50 group has $H = 1$ (maximum confusion). A 75/25
+split sits between:
+
+$$
+H = -\left(0.75 \log_2 0.75 + 0.25 \log_2 0.25\right) = 0.811
+$$
+
+At each node the tree picks the split that most *reduces* entropy from parent to children (the "information
+gain"). scikit-learn's default uses a close cousin called the Gini impurity -- same intuition, cheaper to
+compute.
+:::
+
+## Random Forests: Many Trees, One Vote
+
+One tree is readable but jumpy: a slightly different training sample can change an early split and reshuffle
+everything below it. A **random forest** embraces that instability -- it grows hundreds of trees, each on a
+random resample of the training data and a random subset of features at each split, and classifies by
+**majority vote**. Individual trees' quirks cancel; the consensus is usually more accurate than any single
+tree.
+
+The forest also yields a second feature ranking: averaging how much each feature's splits purify the data,
+across all the trees, gives a **feature importance** score. The forest's importance ranking and L13's
+chi-square filter -- two methods with nothing in common internally -- crown the same leaders. When
+independent methods agree, believe them. The price is the thing this lesson is about: **you can no longer
+read the model.** Two hundred trees voting is not an explanation; the forest buys accuracy by giving up
+exactly what made the single tree valuable.
+
+## Does Selecting Cost Accuracy?
+
+Here are the real numbers from the lab, on the held-out 30% of messages:
+
+| Model | Features used | Test accuracy |
+|---|---|---|
+| Majority-class baseline | 0 | 86.6% |
+| Decision tree, depth 3 | top 30 (chi-square) | 97.8% |
+| Decision tree, depth 3 | all 2,003 | 98.0% |
+| Random forest, 200 trees | all 2,003 | 99.1% |
+
+**Reading the table:** dropping 1,973 of the 2,003 features cost the tree **0.2 percentage points**. Thirty
+columns do the work of two thousand -- the signal was that concentrated. And this is the depth-3 tree the
+top-30 features buy:
+
+![The lab's depth-3 decision tree drawn as a diagram: the root node splits on digit_count at 4.5; its left branch (fewer digits) asks about the words www and mobile, and its right branch (more digits) refines on digit_count at 9.5 and message length near 180 characters. Leaves are colored by class -- orange for ham, blue for spam.](assets/l14_spam_tree.png)
+
+**Reading the figure:** the root split is `digit_count <= 4.5` -- the feature you *handcrafted* in L11/L12
+beat all 2,000 vocabulary columns to the most valuable position in the tree. Messages with five or more
+digits are essentially spam territory (refined by length); nearly digit-free messages are ham unless words
+like "www" or "mobile" appear. That is a spam filter you can read aloud in one breath -- at 97.8% accuracy.
+
+## Filters vs Trees
+
+Three different methods named which features matter, and they largely agree:
+
+- **L13's chi-square filter** ranked `digit_count`, `length`, then free, txt, claim, www, prize.
+- **The tree's nodes** spend their three questions on `digit_count`, `www`, `mobile`, `length`.
+- **The forest's importance** ranks `digit_count`, `length`, free, txt, www, claim.
+
+A filter scores features alone; a tree picks them in combination; a forest averages over hundreds of trees.
+That three unrelated procedures crown the same handful -- `digit_count` and `length` first every time -- is
+strong evidence those features carry the real signal, not an artifact of one method's quirks.
+
+## When to Use Which
+
+- **Filter (chi-square ranking, L13)** -- first move on any wide matrix: cheap, fast, model-free triage from
+  thousands of candidates to dozens. Cannot see interactions.
+- **Single shallow tree** -- when the deliverable is an *explanation*: a readable rule, a diagram for a
+  meeting, a policy a human signs off on. Slightly less accurate, far more accountable.
+- **Random forest** -- when accuracy is the priority and a ranked feature list is explanation enough; also
+  the standard second opinion on a filter's ranking.
+
+## Common Pitfalls
+
+- **Selecting before splitting.** Rank features on *all* the data and then split for testing, and the test
+  set has already leaked its preferences into the selection -- accuracy is quietly inflated. Fit the
+  selector on the **training split only** (this is L13's deferred discipline, now live).
+- **Importance is not causation.** "digit_count ranks first" means it *separates the classes in this
+  collection*, not that digits cause spam. A spammer who spells out "oh-eight-hundred" defeats the feature
+  without changing the message.
+- **Correlated twins split the credit.** `length` and `digit_count` partly overlap; a forest divides
+  importance between them, so a feature ranked low may be a redundancy casualty, not useless.
+- **Accuracy hides the error types.** On imbalanced classes, a single accuracy treats deleting your mother's
+  text and letting one ad through as equal mistakes. Scores that separate the two error types exist (they
+  are called **precision** and **recall** -- the natural next step, not taught here).
+
+## Quiz Hooks
+
+*Feeds the retrieval quiz at the start of the next session.*
+
+- Why is a spam filter's accuracy quoted against the majority baseline (86.6%) and not against zero? 
+- Given a printed two-level tree, classify a described message by walking the splits. 
+- The top-30 tree scores 97.8% and the all-2,003 tree 98.0%: what did selection cost, and what does that say? 
+- The forest scores 99.1%, the depth-3 tree 97.8%: pick the right model for a stated goal (an audit vs. raw accuracy) and justify. 
+
+## FAQ / Industry Reality
+
+**"Why not just keep all 2,003 features? Storage is cheap."** -- Storage is cheap; *attention* is not. Every
+kept feature is a column someone must compute for every future message, a knob that can drift, and a chance
+for the model to learn an accidental pattern. The lab's forest rates 1,280 of the 2,003 features below
+0.0001 importance -- most of that matrix is dead weight.
+
+**"The forest got 99.1% -- are we done?"** -- Not quite, for two honest reasons. First, accuracy treats
+every mistake as equal, but deleting a message from your mother and letting one ad through are *not* equal;
+on imbalanced classes you want precision and recall. Second, "done" depends on the deliverable: when the
+*explanation is the product* -- a bank declining a loan, a spam policy a regulator audits -- a readable rule
+that gives up one point of accuracy is the better engineering decision.
+
+**"Is this machine learning?"** -- Yes -- `fit`, `predict`, train/test: you have just done supervised
+learning. This course stops at using classifiers to *extract and validate information* (which features
+matter, what the rule says); the craft of modeling itself -- tuning, validation, the algorithm menu --
+fills a course of its own.
+
+## Cheat-sheet
+
+| Situation | Move | Call |
+|---|---|---|
+| Need an honest score for a feature set | train/test split + accuracy vs baseline | `train_test_split(stratify=y)`, `.score` |
+| Deliverable is a readable rule | shallow tree, then read it | `DecisionTreeClassifier(max_depth=3)`, `export_text` |
+| Accuracy first, a driver list second | random forest + importances | `RandomForestClassifier`, `.feature_importances_` |
+| Tempted to select on all the data | don't -- fit the selector on train only | `SelectKBest(...).fit(X_train, y_train)` |
+
+## Where to Go Deeper
+
+- **Official docs:** [scikit-learn — Decision Trees](https://scikit-learn.org/stable/modules/tree.html) and [Ensembles: Random Forests](https://scikit-learn.org/stable/modules/ensemble.html#random-forests) -- the classifiers and `feature_importances_` this lesson uses.
+- **Book chapter:** [Python Data Science Handbook — Decision Trees and Random Forests](https://jakevdp.github.io/PythonDataScienceHandbook/05.08-random-forests.html) (VanderPlas) -- the mechanics with visuals.
+- **The dataset's paper:** Almeida, T. A., Gomez Hidalgo, J. M., & Yamakami, A. (2011). "Contributions to the Study of SMS Spam Filtering: New Collection and Results", *ACM DocEng 2011* -- what accuracy is achievable with heavier machinery.
