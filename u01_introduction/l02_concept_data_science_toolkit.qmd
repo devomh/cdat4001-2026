@@ -114,16 +114,6 @@ not scale, version, or reproduce: you cannot rerun it on a fresh file and trust 
 steps. Plain Python lists have no vectorized math and no labels. NumPy and pandas give you
 **reproducible, fast, labeled** data work — the reason they are the field's default tools.
 
-## Quiz Hooks
-
-*The things to retain — these feed the L02 retrieval quiz at the start of L03.*
-
-- A NumPy array has a **shape** and a single **dtype**; **vectorized** ops beat Python loops 
-- A **DataFrame** is a labeled table with mixed-type columns; an **ndarray** is raw numbers of one type 
-- **Detect and handle missing values** with `isnull().sum()` then `fillna(...)` 
-- **Tidy data**: one row per observation, one column per variable, one type per column 
-- A **text (object) column is not summarized** by `.describe()` until its type is fixed 
-
 ## Where to Go Deeper
 
 - **Course text:** [VanderPlas, *Python Data Science Handbook*](https://jakevdp.github.io/PythonDataScienceHandbook/) — Ch. 2 (NumPy) and Ch. 3 (pandas).

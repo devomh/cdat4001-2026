@@ -130,15 +130,6 @@ effect on a million rows.
 - **Reach for Parquet** when: you will analyze the data more than once, it is large, your
   queries touch a few columns, or it feeds a pipeline.
 
-## Quiz Hooks
-
-*The things to retain — these feed the L03 retrieval quiz at the start of L04.*
-
-- The Vs (volume, velocity, variety, veracity) and **which V a described failure shows** 
-- **Scale up vs scale out**, and why large data favors moving the computation to the data 
-- Placing a task (store at scale / cluster compute / SQL-NoSQL / web API) on the platform map 
-- **CSV is row-oriented text; Parquet is columnar and compressed** — and *why* columnar wins a one-column aggregate 
-
 ## FAQ / Industry Reality
 
 **"My 50 GB CSV — is that big data?"** — Almost certainly not. Convert it to Parquet, point

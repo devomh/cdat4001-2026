@@ -147,15 +147,6 @@ data you acquired yourself.
 - The lab splits the difference: it fetches live, but **bundles a saved snapshot** of the response --
   acquire once, analyze many times, and stay reproducible offline.
 
-## Quiz Hooks
-
-*The things to retain -- these feed the retrieval quiz on this lesson, given at the start of Unit III.*
-
-- Why **nesting** makes JSON semi-structured rather than tabular 
-- The parts of a **GET request** (endpoint + params) and what common **status codes** mean 
-- What **flattening** does to nested JSON, and what gets repeated down the rows 
-- **When an API beats a file** download, and respecting **rate limits** (`429`) 
-
 ## FAQ / Industry Reality
 
 **"Can I just hit the API in a loop, as fast as possible?"** -- No. Public APIs enforce **rate

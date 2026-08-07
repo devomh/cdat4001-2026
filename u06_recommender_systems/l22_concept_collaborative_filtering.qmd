@@ -193,16 +193,6 @@ it maximizes watch time, and quietly encode bias from who rated what. These are 
 | Score an unseen movie | neighbors' similarity-weighted (centered) ratings, add the user mean back |
 | Latent-factor prediction | $\hat{R} = P\,Q^\top$ (L18 matrix product; learn $P,Q$ by gradient descent) |
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Classify a feedback signal as explicit or implicit (e.g. "minutes watched" vs "a thumbs-up") 
-- Match a recommender approach (collaborative / content / demographic / knowledge-based) to the information it needs or a one-line description 
-- Identify the mechanism of collaborative filtering: why we mean-center before the cosine (= L19 Pearson r), or what the neighbor weights represent 
-- Diagnose a cold-start scenario and pick the family that addresses it 
-- Identify what matrix factorization's $p_u$ and $q_i$ are — the L18 matrix-product / L20 latent-factor idea (not "PC1 is the best movie", not clustering) 
-
 ## Where to Go Deeper
 
 - **Official docs:** [scikit-learn — Nearest Neighbors](https://scikit-learn.org/stable/modules/neighbors.html) — the general machinery behind neighborhood methods.

@@ -204,7 +204,7 @@ print(f"Random forest, all features: {forest.score(X_test, y_test):.1%}")
 <details><summary>Expected Output</summary>
 
 ~~~text
-Random forest, all features: 99.1%
+Random forest, all features: 99.0%
 ~~~
 </details>
 
@@ -297,7 +297,7 @@ mistakes are a map of its features' blind spots.)*
 
 ### Exercise 3 -- Written: argue the case
 
-A teammate looks at Step 4 and says: *"The forest gets 99.1%, the tree only 97.8% -- always ship the
+A teammate looks at Step 4 and says: *"The forest gets 99.0%, the tree only 97.8% -- always ship the
 forest."* Argue for or against in 3-4 sentences, using at least one piece of evidence from this lab.
 Consider what this unit is named after: extracting *information* from data.
 
@@ -311,7 +311,7 @@ Consider what this unit is named after: extracting *information* from data.
 | Honest yardstick | `train_test_split(stratify=y)`, baseline | 86.6% is the score to beat, not 0% |
 | Filter then tree | `SelectKBest(k=30)`, `DecisionTreeClassifier(max_depth=3)` | A 3-question rule scores 97.8% |
 | The showdown | same tree, both matrices | 30 features do the work of 2,003 (98.0% vs 97.8%) |
-| Random forest | `RandomForestClassifier`, `.feature_importances_` | 99.1% accuracy, but the explanation is gone |
+| Random forest | `RandomForestClassifier`, `.feature_importances_` | 99.0% accuracy, but the explanation is gone |
 | What it ignores | `(importances < 0.0001).sum()` | 1,280 of 2,003 features are dead weight |
 
 Unit IV closes here: you defined features from raw data (L11/L12) and extracted the ones that carry

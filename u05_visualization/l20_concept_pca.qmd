@@ -158,15 +158,6 @@ always inspect before trusting a model.
   columns, or strongly curved relationships, break its assumptions — and if a pair plot already answers the
   question, PCA only adds a layer of abstraction.
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Given a dataset's variable count, pick the statement that correctly explains why a pair plot becomes unworkable, and name a tool that scales better 
-- An analyst runs PCA on raw features (grams, millimeters) and PC1 is 100% one column; diagnose the mistake and name the fix 
-- Given a scree plot / explained-variance ratio, pick how many components to keep under a stated rule (elbow vs 90% threshold) 
-- Given a 2D PCA scatter with three visible clouds and loadings, pick the correct interpretation of what PC1 means and what the clusters represent 
-
 ## FAQ / Industry Reality
 
 **"Is the first component the most important variable?"** — No, and this trips up beginners constantly.

@@ -140,16 +140,6 @@ program that reads the data, forever. Choose schema-on-read because the *data* i
 schema design feels like effort.
 :::
 
-## Quiz Hooks
-
-*The things to retain -- these feed the retrieval quiz on this lesson, given at the start of L06.*
-
-- The SQL clause execution order `FROM -> WHERE -> GROUP BY -> SELECT -> ORDER BY` 
-- **OLTP vs OLAP** and which storage layout each uses (row vs column) 
-- **Schema-on-write vs schema-on-read**, and which NoSQL family stores what 
-- What **flattening** ragged documents into a table forces (NULL-padded columns; lists stranded in cells) 
-- Pick **SQL or NoSQL** for a described workload, and say why 
-
 ## FAQ / Industry Reality
 
 **"If I know pandas, why learn SQL?"** -- Because the data usually arrives *in* a database, and

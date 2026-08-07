@@ -151,15 +151,6 @@ exactly what a decision tree does -- and it is the subject of **L14**.
   A low-ranked feature may be a casualty of **redundancy**, not uselessness -- drop one twin and the
   other's score can jump.
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Given a scenario (2,000 features vs 12 features; an explanation is needed), decide whether feature selection is called for and why. 
-- Given a small word-by-class count table, pick the word a chi-square filter ranks highest -- and the one it scores near zero. 
-- Match each filter (variance threshold / chi-square / mutual information) to what it needs and what it does. 
-- A pair of features carries signal only together: what do filters do with them, and which method fixes it? 
-
 ## FAQ / Industry Reality
 
 **"Why not just keep all 2,003 features? Storage is cheap."** -- Storage is cheap; *attention* is not.

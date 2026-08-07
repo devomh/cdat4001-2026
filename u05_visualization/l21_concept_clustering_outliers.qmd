@@ -152,15 +152,6 @@ when the data is large (it is faster) and you have a k in mind.
 - **Calling every outlier an error.** A far-from-centroid point is a flag to investigate, not a row to
   delete on sight.
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Distinguish clustering from L14's classifier (no labels; groups by similarity) and pick how k-means assigns a point (to the nearest centroid by distance) 
-- Given an elbow plot and silhouette scores that disagree, pick the correct interpretation and what to do (k is a judgment; use domain knowledge) 
-- Given a cluster-vs-species crosstab, read the agreement and identify which groups were recovered cleanly vs which overlapped 
-- Pick how an outlier is flagged (distance to its centroid) and one correct contrast between k-means and hierarchical clustering 
-
 ## FAQ / Industry Reality
 
 **"Are the clusters real?"** — Clustering cannot tell you. Hand it random noise and it returns k neat

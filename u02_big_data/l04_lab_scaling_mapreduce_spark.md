@@ -119,8 +119,13 @@ Start a Spark session in **local mode**: driver and executors all on this machin
 -- a one-machine rehearsal of a cluster.
 
 ```python
+import os
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
+
+# Pin the driver to loopback. Otherwise Spark resolves the machine's hostname and prints it,
+# along with the LAN address, into this cell's output -- machine-specific noise in a shared notebook.
+os.environ["SPARK_LOCAL_IP"] = "127.0.0.1"
 
 spark = (SparkSession.builder
          .master("local[*]")                              # all local cores as executors
@@ -178,7 +183,14 @@ idea: **nothing has run yet.**
 `result` is not a table; it is a **plan**. Ask Spark to show it:
 
 ```python
-result.explain()
+# explain() resolves "data/txns.parquet" to its full path on whatever machine you are on.
+# Redact that one field so the plan below reads the same for everyone.
+import contextlib, io, re
+
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf):
+    result.explain()
+print(re.sub(r"file:[^\]]*", "file:.../data/txns.parquet", buf.getvalue()))
 ```
 
 <details><summary>Illustrative output (your expression IDs and file path will differ)</summary>

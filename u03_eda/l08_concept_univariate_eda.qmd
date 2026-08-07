@@ -166,15 +166,6 @@ names it.
   sentinel lesson) -- count the missing values *first* so you know what fraction of the column your
   statistics actually describe.
 
-## Quiz Hooks
-
-*The things to retain -- these feed the retrieval quiz on this lesson, given at the start of L09.*
-
-- **Mean above the median:** what does it signal, and which should you report? 
-- **Match the plot to the question** (histogram / KDE / box plot / bar chart) 
-- The **1.5 x IQR rule:** what a flagged point means, and why the flag depends on the group 
-- **Robust vs non-robust** statistics: which survive an outlier, which do not 
-
 ## FAQ / Industry Reality
 
 **"Isn't EDA just making pretty plots?"** -- The plots are the *method*, not the product. Professional EDA

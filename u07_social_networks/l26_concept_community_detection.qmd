@@ -131,14 +131,13 @@ links. Use **community detection** when you want the *natural* groups, whatever 
 > Overlapping communities, dynamic (time-evolving) communities, and other detection methods (label
 > propagation, edge-betweenness) are where this goes next; named here, not pursued.
 
-## Quiz Hooks
-
-- What a community is (dense inside, sparse between) and what modularity \(Q\) measures. *(Understand, MC)* 
 - Reading modularity: a higher \(Q\) means a more community-like grouping; \(Q\) near 0 means no structure. *(Understand, MC)* 
 - What community detection does: Louvain maximizes modularity and chooses the number of communities itself. *(Understand / Apply, MC)* 
 - Why detection can find more communities than the ground truth has groups (modularity rewards finer structure). *(Analyze, MC)* 
 - What NMI measures and how to read it (0 = no agreement, 1 = identical), as the check against ground truth. *(Understand / Analyze, MC)* 
 - Community detection vs graph partitioning: which is balanced + min-cut, which is density-driven + variable size, and when to use each. *(Analyze / Evaluate, MC)* 
+
+-->
 
 ## FAQ
 

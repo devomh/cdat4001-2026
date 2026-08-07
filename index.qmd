@@ -2,16 +2,22 @@
 title: "CDAT 4001 — Data Science"
 ---
 
-Course site under construction. Lessons appear here, grouped by unit, as they are
-published through the authoring workflow.
+Welcome to CDAT 4001. These course materials develop an applied data-science
+workflow from data acquisition and exploratory analysis through modeling,
+recommendation, networks, and responsible data practice.
 
-| Unit | Module | Status |
-|------|--------|--------|
-| I — Introduction | `u01_introduction` | pending |
-| II — Big Data | `u02_big_data` | pending |
-| III — EDA | `u03_eda` | pending |
-| IV — Data Mining | `u04_data_mining` | pending |
-| V — Visualization | `u05_visualization` | pending |
-| VI — Recommender Systems | `u06_recommender_systems` | pending |
-| VII — Social Networks | `u07_social_networks` | pending |
-| VIII — Governance | `u08_governance` | pending |
+Use the sidebar to move through the concept lessons, worked examples, hands-on
+labs, and unit mini-projects.
+
+## Course coverage
+
+| Unit | Lessons | Status |
+|------|---------|--------|
+| I — Introduction | L01–L02 | Complete |
+| II — Big Data | L03–L06 | Complete |
+| III — Exploratory Data Analysis | L07–L10 | Complete |
+| IV — Data Mining | L11–L15 | Complete |
+| V — Visualization and Linear-Algebra Foundations | L16–L21 | Complete |
+| VI — Recommender Systems | L22–L24 | Complete |
+| VII — Social Networks | L25–L26 | Complete |
+| VIII — Governance | L27–L28 | Complete |

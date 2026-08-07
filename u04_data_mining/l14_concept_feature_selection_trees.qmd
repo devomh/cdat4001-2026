@@ -129,7 +129,7 @@ Here are the real numbers from the lab, on the held-out 30% of messages:
 | Majority-class baseline | 0 | 86.6% |
 | Decision tree, depth 3 | top 30 (chi-square) | 97.8% |
 | Decision tree, depth 3 | all 2,003 | 98.0% |
-| Random forest, 200 trees | all 2,003 | 99.1% |
+| Random forest, 200 trees | all 2,003 | 99.0% |
 
 **Reading the table:** dropping 1,973 of the 2,003 features cost the tree **0.2 percentage points**. Thirty
 columns do the work of two thousand -- the signal was that concentrated. And this is the depth-3 tree the
@@ -177,15 +177,6 @@ strong evidence those features carry the real signal, not an artifact of one met
   text and letting one ad through as equal mistakes. Scores that separate the two error types exist (they
   are called **precision** and **recall** -- the natural next step, not taught here).
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Why is a spam filter's accuracy quoted against the majority baseline (86.6%) and not against zero? 
-- Given a printed two-level tree, classify a described message by walking the splits. 
-- The top-30 tree scores 97.8% and the all-2,003 tree 98.0%: what did selection cost, and what does that say? 
-- The forest scores 99.1%, the depth-3 tree 97.8%: pick the right model for a stated goal (an audit vs. raw accuracy) and justify. 
-
 ## FAQ / Industry Reality
 
 **"Why not just keep all 2,003 features? Storage is cheap."** -- Storage is cheap; *attention* is not. Every
@@ -193,7 +184,7 @@ kept feature is a column someone must compute for every future message, a knob t
 for the model to learn an accidental pattern. The lab's forest rates 1,280 of the 2,003 features below
 0.0001 importance -- most of that matrix is dead weight.
 
-**"The forest got 99.1% -- are we done?"** -- Not quite, for two honest reasons. First, accuracy treats
+**"The forest got 99.0% -- are we done?"** -- Not quite, for two honest reasons. First, accuracy treats
 every mistake as equal, but deleting a message from your mother and letting one ad through are *not* equal;
 on imbalanced classes you want precision and recall. Second, "done" depends on the deliverable: when the
 *explanation is the product* -- a bank declining a loan, a spam policy a regulator audits -- a readable rule

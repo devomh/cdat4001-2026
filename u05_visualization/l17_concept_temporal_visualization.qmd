@@ -239,15 +239,6 @@ reach.
   extremes; by 365 days the record high is gone. Smoothing is for seeing
   trend, never for reporting events.
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Given short descriptions of three features of a plotted series (a slow multi-year climb; a wave repeating every 12 months; leftover jitter), match each to trend, seasonality, or noise 
-- An analyst resamples daily rainfall to monthly with `.mean()` and reports the hurricane month looks normal; diagnose the aggregation mistake and name the fix 
-- Given a climatology profile (warm August, cool January) and a 12-month rolling-mean line, identify which one shows the seasonal cycle and which shows the trend 
-- Temperature in C and rainfall in mm must share one comparison; pick the right move (z-score both) and reject the distractors (raw overlay; resample finer; plot on two scales without normalizing) 
-
 ## FAQ / Industry Reality
 
 **"Is +1.5 C at one airport proof of global warming?"** — Careful. One

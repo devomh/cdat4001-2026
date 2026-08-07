@@ -279,16 +279,6 @@ spatial data:
   itself (or in the sea). Fine for distance summaries, risky as a "location"
   label.
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Given a visualization goal (e.g. compare a value across categories, or color regions by magnitude), pick the principle or chart/color choice that fits — encoding, the channel ranking, or sequential-vs-qualitative color 
-- Given descriptions of several datasets, pick the one that is vector spatial data and name what its geometry column holds 
-- An analyst sums polygon areas and gets 0.76 for a whole territory; diagnose what went wrong and name the fix 
-- Given a raw-count choropleth and a per-km2 choropleth of the same events, pick which supports a stated claim about intensity (the distortion principle) 
-- Pick the operation that answers "which region contains each event": spatial join vs column merge vs groupby 
-
 ## FAQ / Industry Reality
 
 **"Why not just scatter-plot the longitudes and latitudes?"** — For a first

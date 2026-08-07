@@ -85,7 +85,7 @@ print(f"Parquet: {pq_mb:5.1f} MB  ({csv_mb / pq_mb:.1f}x smaller)")
 
 ~~~text
 CSV    :  42.7 MB
-Parquet:  15.7 MB  (2.7x smaller)
+Parquet:  15.6 MB  (2.7x smaller)
 ~~~
 
 Same data, 2.7x less disk -- that is per-column compression working on repetitive columns.

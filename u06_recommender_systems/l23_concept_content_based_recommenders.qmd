@@ -167,16 +167,6 @@ clicks) is how engagement-at-any-cost systems arise. **Unit VIII** takes these u
 | Hybrid | switch between families, or blend their scores |
 | Evaluate | `train_test_split`, then RMSE \( \sqrt{\text{mean}((\hat r - r)^2)} \) and MAE |
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Match a recommender family (content / demographic / knowledge-based) to the information it needs or the cold-start gap it closes 
-- Identify the content-based mechanism (cosine between a user's feature profile and an item's features) and its over-specialization limit 
-- Read the accuracy ladder / contrast RMSE vs MAE (which method predicts best; what RMSE punishes) 
-- Explain a hybrid recommender (switching vs weighted) and why platforms use one 
-- Distinguish rating-prediction error (RMSE/MAE) from top-N ranking quality (precision@k) 
-
 ## Where to Go Deeper
 
 - **Survey:** [Microsoft Recommenders (GitHub)](https://github.com/recommenders-team/recommenders) -- production-grade examples of content, collaborative, and hybrid recommenders with evaluation.

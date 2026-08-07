@@ -189,12 +189,12 @@ print(f"Cells holding a non-zero count: {X_counts.nnz:,} of {n_cells:,} ({X_coun
 
 ~~~text
 Document-term matrix: 5574 rows x 2000 columns
-Cells holding a non-zero count: 34,548 of 11,148,000 (0.31%)
+Cells holding a non-zero count: 34,549 of 11,148,000 (0.31%)
 ~~~
 </details>
 
 > **Read it:** 5,574 messages times 2,000 vocabulary words is an 11-million-cell matrix -- of which 99.69%
-> are zeros. That is why `fit_transform` returns a *sparse* matrix: it stores only the 34,548 non-zero
+> are zeros. That is why `fit_transform` returns a *sparse* matrix: it stores only the 34,549 non-zero
 > counts and their positions. Text features are wide and almost empty; the format is built for it.
 
 Which words dominate each class? The spam side is worked; ham is yours.
@@ -249,8 +249,9 @@ print()
 counts_row = X_counts[msg_idx].toarray().ravel()
 tfidf_row = X_tfidf[msg_idx].toarray().ravel()
 
-top_by_counts = vocab[counts_row.argsort()[::-1][:5]]
-top_by_tfidf = vocab[tfidf_row.argsort()[::-1][:5]]
+# stable sort on the negated scores: highest first, ties broken by vocabulary order
+top_by_counts = vocab[np.argsort(-counts_row, kind="stable")[:5]]
+top_by_tfidf = vocab[np.argsort(-tfidf_row, kind="stable")[:5]]
 print("Top 5 terms by raw count: ", list(top_by_counts))
 print("Top 5 terms by TF-IDF:    ", list(top_by_tfidf))
 ```
@@ -260,7 +261,7 @@ print("Top 5 terms by TF-IDF:    ", list(top_by_tfidf))
 ~~~text
 The message:
   Free entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C's apply 08452810075over18's
-Top 5 terms by raw count:  ['fa', 'entry', 'tkts', 'receive', 'apply']
+Top 5 terms by raw count:  ['entry', 'fa', '87121', 'apply', 'comp']
 Top 5 terms by TF-IDF:     ['fa', 'entry', '87121', 'tkts', 'cup']
 ~~~
 </details>

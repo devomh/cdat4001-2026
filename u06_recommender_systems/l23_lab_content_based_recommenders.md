@@ -96,7 +96,7 @@ def content_recommend(uid, n=5, min_count=50):
 seen = ratings[ratings.user == 196]
 profile = (seen.rating - seen.rating.mean()).values @ G[seen.item.values - 1]
 top_g = np.argsort(-profile)[:3]
-print("user 196's strongest genres:", [(GENRES[k], round(profile[k], 1)) for k in top_g])
+print("user 196's strongest genres:", [(GENRES[k], round(float(profile[k]), 1)) for k in top_g])
 print("top-5 content-based recommendations for user 196:")
 for t, s in content_recommend(196):
     print(f"{s:.3f}  {t}")

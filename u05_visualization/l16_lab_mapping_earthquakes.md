@@ -103,8 +103,8 @@ print("Quakes CRS:    ", quakes.crs)
 2  Algarrobo  Aibonito Municipio
 
 The geometry column:
-0    POLYGON ((-66.066 17.964, -66.065 17.965, -66....
-1    POLYGON ((-67.199 18.299, -67.197 18.305, -67....
+0    POLYGON ((-66.06569 17.96388, -66.06464 17.964...
+1    POLYGON ((-67.19871 18.29861, -67.19673 18.304...
 Name: geometry, dtype: geometry
 
 Boundaries CRS: EPSG:4269
@@ -329,9 +329,9 @@ Epicenters on land: 56 of 250 -- the rest were offshore
 
 NAMELSADCO
 Guánica Municipio       18
-Guayanilla Municipio    17
+Guayanilla Municipio    16
 Peñuelas Municipio      10
-Yauco Municipio          8
+Yauco Municipio          9
 Lajas Municipio          2
 Ponce Municipio          1
 Name: n_quakes, dtype: int64

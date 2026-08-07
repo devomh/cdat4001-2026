@@ -216,7 +216,7 @@ print(f"matrix factorization p@10: {p_mf:.3f}")
 <details><summary>Expected Output</summary>
 
 ~~~text
-popularity precision@10:   0.136
+popularity precision@10:   0.135
 item-item CF precision@10: 0.032
 matrix factorization p@10: 0.070
 ~~~
@@ -238,7 +238,7 @@ print(board.to_string())
 
 ~~~text
                      RMSE (lower=better) precision@10 (higher=better)
-popularity                  n/a (ranker)                        0.136
+popularity                  n/a (ranker)                        0.135
 item-item CF                       0.945                        0.032
 matrix factorization               0.922                        0.070
 ~~~
@@ -261,7 +261,7 @@ plt.tight_layout(); plt.show()
 
 **The twist.** The two leaderboards **disagree**. By RMSE, matrix factorization is the best
 recommender (0.922, beating CF's 0.945). By precision@10, the *dumbest* approach -- recommend
-the most-popular movies to everyone -- wins easily (**0.136**, nearly double matrix
+the most-popular movies to everyone -- wins easily (**0.135**, nearly double matrix
 factorization's 0.070, and four times CF's 0.032).
 
 Both results are real, and together they are the whole lesson:
@@ -307,7 +307,7 @@ brand-new users** (the cold-start problem from L22/L23). Use the numbers from yo
   (RMSE *and* precision@10) -> **decide**.
 - **precision@k** measures ranking quality (how many of the top-k are relevant) -- different
   from RMSE's rating-prediction error.
-- The leaderboards **disagreed**: MF won RMSE (0.922), popularity won precision@10 (0.136). The
+- The leaderboards **disagreed**: MF won RMSE (0.922), popularity won precision@10 (0.135). The
   "best" model depends on the metric -- so choose the metric that matches what users experience.
 - **Popularity is the baseline to beat**, and the cold-start default; you ship a personalized
   model judged on a ranking metric, and report both numbers honestly.

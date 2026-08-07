@@ -181,7 +181,7 @@ def recommend_user_based(uid, k=30, n=5):
     den = np.abs(w) @ rated[neighbors].astype(float)   # total weight that actually rated each movie
     scores = user_mean[u] + np.divide(num, den, out=np.full(n_items, -np.inf), where=den > 0)
     scores[rated[u]] = -np.inf                         # drop movies u already rated
-    top = np.argsort(-scores)[:n]
+    top = np.argsort(-scores, kind="stable")[:n]       # stable: equal scores break by item id, not sort internals
     return [(items.set_index("item").loc[i + 1, "title"], scores[i]) for i in top]
 
 print("top-5 user-user recommendations for user 196:")
@@ -194,10 +194,10 @@ for title, score in recommend_user_based(196):
 ~~~text
 top-5 user-user recommendations for user 196:
 5.47  Andre (1994)
-5.35  Apartment, The (1960)
 5.35  Old Yeller (1957)
-5.12  Story of Xinghua, The (1993)
+5.35  Apartment, The (1960)
 5.12  Bean (1997)
+5.12  Story of Xinghua, The (1993)
 ~~~
 </details>
 
@@ -367,7 +367,7 @@ def recommend_mf(uid, n=5):
     scores = gmean + bu[u] + bi + P[u] @ Q.T        # predict every movie at once (L18 matrix-vector)
     seen = ratings[ratings.user == uid].item.map(item_ids).values
     scores[seen] = -np.inf                          # drop already-rated movies
-    top = np.argsort(-scores)[:n]
+    top = np.argsort(-scores, kind="stable")[:n]       # stable: equal scores break by item id, not sort internals
     return [(items.set_index("item").loc[inv_item[j], "title"], scores[j]) for j in top]
 
 print("top-5 matrix-factorization recommendations for user 196:")

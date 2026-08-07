@@ -233,15 +233,6 @@ projection onto a cleverly chosen `d`.
   for "how alike" use cosine (or mean-center first, which is L19's road to
   correlation).
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Given a small table and a claim about it, identify which object is a vector vs a matrix and state the matrix's shape as (rows, cols) 
-- Given two short vectors, pick the correct dot product and the right reading (weighted sum / similarity); recognize why cosine is used instead of the raw dot for "how alike" 
-- Pick the operation that "scores every item for one user in one step" (matrix-vector) vs "scores all users against all items" (matrix-matrix), and which one matrix factorization uses 
-- Given two shapes, decide whether `A @ B` is legal and state the result shape (the inner-dimension rule); or pick what transpose / a projection does 
-
 ## FAQ / Industry Reality
 
 **"Do I need eigenvalues, determinants, and matrix inverses?"** — Not for

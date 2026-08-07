@@ -129,15 +129,6 @@ Pick a question about *your* town or a campus you know. Then, on paper:
 
 Share with a neighbor; we'll collect three examples.
 
-## Quiz Hooks
-
-*The things to retain — these feed the L01 retrieval quiz at the start of L02.*
-
-- The **five stages** of the DS process, in order 
-- **Classify** data as structured / semi-structured / unstructured 
-- **DS is not ML**: most DS work is acquire + clean + communicate 
-- **Application areas**: DS appears across the natural, commercial, and social sciences and social media 
-
 ## FAQ / Industry Reality
 
 **"Is data science just machine learning?"** — No. Surveys consistently put *data

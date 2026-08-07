@@ -202,16 +202,6 @@ Engineering features is easy; engineering *good* ones is the skill. Four quick t
   perfect in the notebook and collapses in production. Always ask: could I compute this *before* I knew the
   answer?
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Given a raw column and a goal, pick the legitimate feature -- and spot the one that leaks the label. 
-- Given a nominal column and an already-ordinal column, choose the right encoding for each. 
-- Why (and for which algorithms) does scaling matter -- and which two recipes put columns on one footing? 
-- Read a one-hot before/after column count: which column is heading for the high-cardinality trap? 
-- Decide when to bin a continuous column versus keep it raw, and what `qcut` guarantees that `cut` does not. 
-
 ## FAQ / Industry Reality
 
 **"Isn't this just data cleaning from Unit I?"** -- Cleaning makes the data *correct* (fix types, fill

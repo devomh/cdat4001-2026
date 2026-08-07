@@ -138,7 +138,7 @@ YearBuilt    -> Discrete    (integer years; ordered; not a count)
 ### 1b. Missing values and duplicates
 
 ```python
-print(df.isnull().sum().sort_values(ascending=False))
+print(df.isnull().sum().sort_values(ascending=False, kind="stable"))  # stable: columns tied at 0 stay in table order
 print("Duplicate rows:", df.duplicated().sum())
 ```
 

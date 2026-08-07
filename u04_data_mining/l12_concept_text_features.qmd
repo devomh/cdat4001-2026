@@ -174,15 +174,6 @@ down-weighted -- is unchanged.
   predicts spam perfectly and teaches nothing -- it *is* the label in disguise (the L11 leak test).
   Features must be computable for data whose answer you do not yet know.
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Given two example messages from different classes, pick the one-line handcrafted feature that separates them. 
-- Read a small document-term matrix: which message contains which words, and why most cells are zero. 
-- Counts rank word A on top, TF-IDF ranks word B: what does that say about A and B across the corpus? 
-- The top tokens include `gt` and `lt`: what went wrong, and what does it tell you to do? 
-
 ## FAQ / Industry Reality
 
 **"Why not just keep the text as text?"** -- Because nothing downstream consumes text. Every statistic from

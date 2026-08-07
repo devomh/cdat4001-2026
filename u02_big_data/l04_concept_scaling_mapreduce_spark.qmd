@@ -104,15 +104,6 @@ Parquet file.
 - The professional default order of escalation: **sample it, then laptop, then one big machine, then
   cluster** -- and most projects never reach the last step.
 
-## Quiz Hooks
-
-*The things to retain -- these feed the L04 retrieval quiz at the start of L05.*
-
-- The order and roles of **map / shuffle / reduce**, and which phase moves data (shuffle) 
-- **Driver vs executors** and what **local mode** is (a one-machine rehearsal of a cluster) 
-- What **lazy evaluation** defers, and which calls (**actions**) trigger execution 
-- **When a cluster is NOT worth it** (laptop-first escalation; clusters buy capacity, not speed) 
-
 ## FAQ / Industry Reality
 
 **"Is Hadoop dead, then?"** -- The *programming model* (hand-written MapReduce jobs) is legacy; the

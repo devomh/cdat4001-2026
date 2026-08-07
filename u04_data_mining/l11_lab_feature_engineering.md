@@ -153,7 +153,7 @@ line -- `fit` learns the mean and std, `transform` applies them:
 ```python
 # 2c. StandardScaler reproduces 2a in one line (the fit/transform pattern you will reuse in L13-L15)
 X_scaled = StandardScaler().fit_transform(df[["GrLivArea"]])
-print("StandardScaler first 3:", [round(v, 4) for v in X_scaled[:3].ravel()])
+print("StandardScaler first 3:", [round(float(v), 4) for v in X_scaled[:3].ravel()])
 ```
 
 <details><summary>Expected Output</summary>

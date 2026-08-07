@@ -150,15 +150,6 @@ The catalogue, as a decision menu -- match the **question** to the **picture**:
 - **Truncated or distorted axes.** A y-axis that does not start where it should can manufacture a trend or
   hide one -- the fastest way a correct plot tells a lie.
 
-## Quiz Hooks
-
-*The things to retain -- these feed the retrieval quiz on this lesson, given at the start of L10.*
-
-- **Reading a scatter:** direction / form / strength, and why the picture beats the number alone 
-- **The Pareto cumulative line:** what "the vital few" means and how the sort makes it visible 
-- **Reading a time plot:** telling trend from seasonality from a one-off spike 
-- **Choosing a plot:** match a described question to the right picture (incl. many-variable views) 
-
 ## FAQ / Industry Reality
 
 **"Which chart should I default to?"** -- There is no default; the *question* picks the chart, which is why

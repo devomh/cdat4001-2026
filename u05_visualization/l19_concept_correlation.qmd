@@ -209,15 +209,6 @@ of two centered vectors.
 - **Extrapolating the line.** A fit holds *inside* the observed range; beyond it you have hope, not
   evidence.
 
-## Quiz Hooks
-
-*Feeds the retrieval quiz at the start of the next session.*
-
-- Connect r to L18: r is the cosine of the two mean-centered columns; given that covariance is their dot product, pick what dividing by both lengths achieves (a unit-free -1..+1 score) 
-- Read a described scatter (curved / outlier-driven / monotone-but-not-linear) and pick when Spearman is the honest choice over Pearson 
-- Given r (and r-squared), interpret correlation as prediction: what fraction of variance a best-fit line explains, and the extrapolation caveat 
-- A Simpson's-paradox scenario (pooled r vs per-group r): which conclusion is justified? 
-
 ## FAQ / Industry Reality
 
 **"Is r = 0.9 always better evidence than r = 0.5?"** — Better evidence *of linear association in your

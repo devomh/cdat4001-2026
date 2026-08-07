@@ -156,14 +156,13 @@ learning the ideas, a 34-node graph you can draw entirely is exactly right.
 > links between them — and can an algorithm recover the karate club's two real factions from structure
 > alone? That is **community detection**.
 
-## Quiz Hooks
-
-- What a graph is, and the node/edge vocabulary; directed vs. undirected, weighted vs. unweighted. *(Understand, MC)* 
 - Reading degree, neighbours, and density off a small graph. *(Understand / Apply, MC)* 
 - The adjacency matrix: symmetry for undirected graphs, row sum = degree, and what `A @ A` counts (the L18 bridge). *(Analyze, MC)* 
 - The three centralities and what each one means. *(Understand, MC)* 
 - Why centralities disagree: identifying the *broker* (high betweenness, not necessarily high degree). *(Analyze, MC)* 
 - Ego networks and local structure: what the clustering coefficient measures. *(Understand / Apply, MC)* 
+
+-->
 
 ## FAQ
 

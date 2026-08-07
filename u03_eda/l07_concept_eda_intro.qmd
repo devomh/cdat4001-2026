@@ -144,15 +144,6 @@ are invisible to a model -- it will fit them as if they were real and report a n
 problem.
 :::
 
-## Quiz Hooks
-
-*The things to retain -- these feed the retrieval quiz on this lesson, given at the start of L08.*
-
-- The **goals of EDA** and where it sits in the process loop (clean <-> explore) 
-- **Classifying a variable** by type, and what each type lets you do (count? rank? average?) 
-- **Forming expectations then checking** them -- sanity checks and hidden missing-value sentinels 
-- **Why explore before modeling** -- what EDA catches that accuracy hides 
-
 ## FAQ / Industry Reality
 
 **"Isn't EDA just making pretty plots?"** -- The plots are the *method*, not the product. Professional

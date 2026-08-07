@@ -94,7 +94,7 @@ print("Variance threshold kept", int(vt.get_support().sum()), "of", X.shape[1], 
 <details><summary>Expected Output</summary>
 
 ~~~text
-Variance threshold kept 1483 of 2003 features
+Variance threshold kept 1482 of 2003 features
 ~~~
 </details>
 
@@ -146,7 +146,7 @@ Keep the top 30 with `SelectKBest`:
 selector = SelectKBest(chi2, k=30).fit(X, y)
 kept = feature_names[selector.get_support()]
 print("Kept", int(selector.get_support().sum()), "of", X.shape[1], "features:")
-print(sorted(kept))
+print(sorted(kept.tolist()))
 ```
 
 <details><summary>Expected Output</summary>
@@ -292,7 +292,7 @@ in 3-4 sentences, naming at least one reason a low-scoring feature might still b
 
 | Move | Key command | What you learned |
 |------|-------------|------------------|
-| Variance threshold | `VarianceThreshold(threshold=0.001)` | Drop near-constant columns label-free (2003 -> 1483) |
+| Variance threshold | `VarianceThreshold(threshold=0.001)` | Drop near-constant columns label-free (2003 -> 1482) |
 | Chi-square rank | `chi2`, `SelectKBest(k=30)` | Your handcrafted features top all 2,000 words |
 | Read the bottom | `ranking.sort_values()` | A word balanced across classes ("30", "fri") scores 0.000 |
 | Second opinion | `mutual_info_classif` | An unrelated filter crowns 9 of the same top 10 |

@@ -181,14 +181,13 @@ For each, name which rules apply and what compliance would require.
 3. A professor wants to share a spreadsheet of student grades with an external tutoring vendor to target
    help. Which rule is in the room first, and what would make the sharing lawful?
 
-## Quiz Hooks
-
-- The difference between a law/regulation (mandatory) and a standard (voluntary), and law as the "floor". *(Understand, MC)* 
 - How legal compliance relates to ethics (compliance is the minimum, not the whole of doing right). *(Understand, MC)* 
 - What GDPR, HIPAA, and FERPA each protect (match the law to its domain). *(Understand, MC)* 
 - A core data-subject right or de-identification idea: GDPR erasure / the HIPAA Safe Harbor "remove the identifiers". *(Understand / Analyze, MC)* 
 - The Puerto Rico / US context: US federal law applies in PR, plus PR's own breach-notification duty; standards are voluntary. *(Understand, MC)* 
 - Apply the right rule(s) to a short scenario and say what compliance requires. *(Apply / Analyze, MC)* 
+
+-->
 
 ## FAQ
 
