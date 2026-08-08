@@ -158,6 +158,14 @@ down-weighted -- is unchanged.
 - **Avoid all three** when word *order* or meaning matters more than word *choice* ("not good" versus
   "good") -- sequence-aware representations exist beyond this course's scope.
 
+::: {.column-margin}
+**Where sequence-aware text work lives.** [spaCy](https://spacy.io/) and
+[NLTK](https://www.nltk.org/) add linguistic structure -- tokenizers that respect punctuation,
+part-of-speech tags, named entities. [sentence-transformers](https://sbert.net/) produces
+embeddings in which "not good" and "good" land in genuinely different places. All are past this
+course's scope; they are the next step if word order turns out to be your signal.
+:::
+
 ## Common Pitfalls
 
 - **Vectorizing before looking at the text.** Raw corpora are dirty. The lab's corpus contains leftover

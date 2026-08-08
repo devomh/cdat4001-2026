@@ -48,6 +48,14 @@ Almost all data work in Python sits on a small, stable stack. The two foundation
 pandas is built *on top of* NumPy, so they fit together: a DataFrame column is essentially a
 NumPy array with a label.
 
+::: {.column-margin}
+**Beyond pandas.** [polars](https://pola.rs) is a newer DataFrame library built on Apache Arrow,
+often much faster than pandas on large joins and group-bys;
+[narwhals](https://narwhals-dev.github.io/narwhals/) wraps both behind one API, which matters when
+you write a *library* rather than an analysis. This course teaches pandas because it remains the
+field's default and the one you will meet first.
+:::
+
 ## Core Ideas
 
 ### NumPy arrays

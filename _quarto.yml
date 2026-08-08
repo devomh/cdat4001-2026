@@ -105,6 +105,7 @@ format:
     code-copy: true
     code-overflow: wrap
     html-math-method: katex
+    include-after-body: assets/diagram-zoom.html   # click any diagram/figure to enlarge (decision 0023)
 
 execute:
   freeze: auto

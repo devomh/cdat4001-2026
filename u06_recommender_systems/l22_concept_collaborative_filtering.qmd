@@ -147,6 +147,13 @@ factorized prediction matrix. They will look plausible. But "looks plausible" is
 want? That is **L23**: the other approaches *and* how to evaluate all of them, including the famous
 ladder where each idea beats the last.
 
+::: {.column-margin}
+**Libraries for the real thing.** You build these by hand to see the mechanics.
+[Surprise](https://surpriselib.com/) packages the classic rating-prediction algorithms with
+cross-validation and RMSE/MAE built in; [implicit](https://implicit.readthedocs.io/) targets the
+implicit-feedback case (clicks, plays) that most production systems actually run on.
+:::
+
 ## FAQ / Industry Reality
 
 **"Why not just recommend the most popular items?"** Popularity is a fine *baseline* and a reasonable

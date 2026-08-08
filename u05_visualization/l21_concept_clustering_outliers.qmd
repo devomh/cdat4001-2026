@@ -140,6 +140,14 @@ when the data is large (it is faster) and you have a k in mind.
   an algorithm to assign them. Cluster when you need the *assignment* (which row in which group), not just
   the picture.
 
+::: {.column-margin}
+**A third family: density-based.** Both algorithms here look for a set number of roughly round groups.
+[DBSCAN](https://scikit-learn.org/stable/modules/clustering.html#dbscan) and its successor
+[HDBSCAN](https://hdbscan.readthedocs.io/) instead grow clusters out of dense regions: they find
+arbitrarily shaped groups, pick the count themselves, and label sparse points as **noise** rather than
+forcing every row into some cluster.
+:::
+
 ## Common Pitfalls
 
 - **Clustering always returns clusters.** Even pure noise gets partitioned into k tidy groups. The

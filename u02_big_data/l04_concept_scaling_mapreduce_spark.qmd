@@ -104,6 +104,13 @@ Parquet file.
 - The professional default order of escalation: **sample it, then laptop, then one big machine, then
   cluster** -- and most projects never reach the last step.
 
+::: {.column-margin}
+**The rungs between pandas and Spark.** That ladder has a middle step people skip past too quickly.
+[Dask](https://www.dask.org/) parallelizes pandas-like code across cores or machines;
+[polars](https://pola.rs) streams datasets larger than RAM on a single machine; and DuckDB (**L05**)
+queries Parquet files far bigger than memory. Try these before reaching for a cluster.
+:::
+
 ## FAQ / Industry Reality
 
 **"Is Hadoop dead, then?"** -- The *programming model* (hand-written MapReduce jobs) is legacy; the

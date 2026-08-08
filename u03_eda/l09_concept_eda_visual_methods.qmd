@@ -137,6 +137,13 @@ The catalogue, as a decision menu -- match the **question** to the **picture**:
 | How do many numeric variables compare across rows? | **parallel coordinates** |
 | How do a few items compare across several attributes? | **star / radar plot** |
 
+::: {.column-margin}
+**Interactive alternatives.** This course plots with matplotlib and seaborn, which produce *static*
+figures. [Plotly](https://plotly.com/python/) and [Altair](https://altair-viz.github.io/) build the
+same chart types with hover, zoom, and selection instead. Useful while exploring; a static figure is
+still what belongs in a report.
+:::
+
 ## Common Pitfalls
 
 - **Reading a number off a scatter you have not plotted.** A correlation (L19) computed without looking

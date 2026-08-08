@@ -147,9 +147,14 @@ NetworkX is the standard Python library for graphs. The verbs you need this less
 | Distances | `nx.shortest_path_length`, `nx.diameter` |
 | Draw | `nx.draw`, `nx.spring_layout` |
 
-For graphs with millions of nodes you would move to a faster engine (igraph, graph-tool) or an
-interactive tool (Gephi); the **SNAP** repository's Facebook ego-networks are a good next dataset. For
-learning the ideas, a 34-node graph you can draw entirely is exactly right.
+NetworkX is built for clarity rather than raw scale, and for learning the ideas a 34-node graph you
+can draw entirely is exactly right.
+
+::: {.column-margin}
+**At scale, and beyond NetworkX.** For graphs with millions of nodes you would move to a faster
+engine — **igraph** or **graph-tool**, both C-backed — or to an interactive tool like **Gephi**.
+The **SNAP** repository's Facebook ego-networks are a good next dataset.
+:::
 
 > **Forward to L26.** We measured *one* node at a time — degree, centrality, the neighbourhood. The next
 > lesson asks a **global** question: do the nodes fall into **communities** — dense groups with sparse

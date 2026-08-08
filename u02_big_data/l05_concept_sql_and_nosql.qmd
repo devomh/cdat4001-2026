@@ -87,6 +87,13 @@ engines win analytical queries for the same reason.
 (`pip install duckdb`), and it queries data files and pandas DataFrames directly, with real SQL and
 columnar speed. It is the lab's SQL engine.
 
+::: {.column-margin}
+**Other zero-setup SQL.** Python ships [`sqlite3`](https://docs.python.org/3/library/sqlite3.html)
+in its standard library -- nothing to install at all, though it is row-oriented (OLTP), so
+analytical scans are slower. [Ibis](https://ibis-project.org/) offers one dataframe-style API that
+compiles down to DuckDB, Postgres, or BigQuery, if you would rather not write the same query twice.
+:::
+
 ## The Document Way: Schema-on-Write vs Schema-on-Read
 
 The deepest difference between relational and NoSQL is *when structure is enforced*:

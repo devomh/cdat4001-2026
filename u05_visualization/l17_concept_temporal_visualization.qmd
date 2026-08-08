@@ -140,6 +140,14 @@ months — and the wave averages to the same value everywhere, vanishing
 from the output; what survives is the drift. The naive instinct is "more
 smoothing is better": a 3-month window leaves the wave half-alive, while a
 20-year window flattens real decade-scale swings into a featureless line.
+
+::: {.column-margin}
+**Decomposition, done for you.** statsmodels'
+[`seasonal_decompose`](https://www.statsmodels.org/stable/generated/statsmodels.tsa.seasonal.seasonal_decompose.html)
+splits a series into trend, seasonal, and residual parts in one call — the packaged version of what
+the rolling mean and the climatology do by hand here. Doing it by hand first is the point; reach for
+the library once you can read what it hands back.
+:::
 The better rule: **match the window to the pattern you want to remove**
 (one full cycle), and say so. In the lab this yields the lesson's headline:
 the 1960s averaged 26.17 C, the last decade 27.65 C — and the warmest year

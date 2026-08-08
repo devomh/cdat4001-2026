@@ -138,6 +138,13 @@ gdf = gpd.GeoDataFrame({
 }, crs="EPSG:4326")
 ```
 
+::: {.column-margin}
+**What is `shapely`?** It is the geometry engine GeoPandas is built on — `Point`, `LineString`, and
+`Polygon` are its classes, and the spatial verbs (area, distance, `within`) are its work. You import
+it directly only when constructing geometries by hand, as above; reading a file gives you shapely
+objects without ever naming it.
+:::
+
 Two file formats cover most of what you will meet:
 
 - **Shapefile** — the GIS classic, actually a *bundle* of files usually
@@ -199,9 +206,13 @@ municipios.plot(column="area_km2", cmap="YlGnBu", legend=True)
 
 `cmap="YlGnBu"` is a **sequential** ramp — principle 4 in action: an ordered
 magnitude (area) gets a light-to-dark single-hue scale, so darker reads as
-"more". Binned variants exist too (`scheme="quantiles"`, via the
-`mapclassify` package) and help when one extreme region would otherwise wash
-out the scale.
+"more".
+
+::: {.column-margin}
+**Binned color scales.** Passing `scheme="quantiles"` (via the `mapclassify`
+package) buckets the values instead of ramping them continuously — useful
+when one extreme region would otherwise wash out the whole scale.
+:::
 
 The eye reads dark as "more". That makes choropleths powerful and also
 gives them their classic failure mode — principle 5: **regions with more land
