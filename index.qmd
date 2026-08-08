@@ -1,23 +1,102 @@
 ---
 title: "CDAT 4001 — Data Science"
+subtitle: "University of Puerto Rico at Humacao · Department of Mathematics"
+toc: false
 ---
 
-Welcome to CDAT 4001. These course materials develop an applied data-science
-workflow from data acquisition and exploratory analysis through modeling,
-recommendation, networks, and responsible data practice.
+Data science extracts knowledge from data. Over 28 lessons this course walks the whole
+process once, end to end — acquiring data, exploring it, mining it for structure,
+visualizing what you find, building two case-study systems on it, and reckoning with what
+you owe the people the data came from.
 
-Use the sidebar to move through the concept lessons, worked examples, hands-on
-labs, and unit mini-projects.
+Everything here runs. Every number, table, and figure on these pages was produced by
+executing the code you see next to it.
+
+::: {.callout-tip}
+## Start here
+
+New to the course? Read [What Is Data Science? The Process and the
+Landscape](u01_introduction/l01_concept_intro_data_science.qmd), then work through [Lab:
+The Data Scientist's Toolkit](u01_introduction/l02_lab_data_science_toolkit.md) — it gets
+you running code in the browser within minutes, with nothing to install.
+:::
+
+## How the course works
+
+Each lesson comes in one or two parts, and units end with something you build:
+
+- **Concept notes** introduce an idea, with worked examples and the reasoning behind the
+  technique. Start here for each lesson.
+- **Labs** are runnable notebooks. You open them in Google Colab and execute them
+  yourself; every lab is paired with its concept note.
+- **Mini-projects** close Units III, IV, and VI. These are not new material — they hand
+  you a messy question and make you choose among the techniques the unit taught, then
+  defend the choice.
+
+A short retrieval quiz opens most sessions, covering the previous lesson. It is low-stakes
+and its purpose is to help the material stick, not to rank you.
 
 ## Course coverage
 
-| Unit | Lessons | Status |
-|------|---------|--------|
-| I — Introduction | L01–L02 | Complete |
-| II — Big Data | L03–L06 | Complete |
-| III — Exploratory Data Analysis | L07–L10 | Complete |
-| IV — Data Mining | L11–L15 | Complete |
-| V — Visualization and Linear-Algebra Foundations | L16–L21 | Complete |
-| VI — Recommender Systems | L22–L24 | Complete |
-| VII — Social Networks | L25–L26 | Complete |
-| VIII — Governance | L27–L28 | Complete |
+| Unit | Lessons | What you will do |
+|------|---------|------------------|
+| [I — Introduction](u01_introduction/l01_concept_intro_data_science.qmd) | L01–L02 | The data-science process and where the field sits; NumPy and pandas on a first messy table |
+| [II — Big Data](u02_big_data/l03_concept_big_data_challenges.qmd) | L03–L06 | CSV versus Parquet on a million rows; MapReduce by hand, then PySpark; SQL and NoSQL on one ragged catalogue; pulling live data from a web API |
+| [III — Exploratory Data Analysis](u03_eda/l07_concept_eda_intro.qmd) | L07–L10 | Distributions, summary statistics, and a catalogue of charts — closing with a **mini-project** on what drives house prices |
+| [IV — Data Mining](u04_data_mining/l11_concept_feature_engineering.qmd) | L11–L15 | Features from raw and from text data; filter-based selection; decision trees and random forests — closing with a **mini-project** on what predicts higher income |
+| [V — Visualization](u05_visualization/l16_concept_spatial_visualization.qmd) | L16–L17, L19–L21 | Mapping Puerto Rico earthquakes; 65 years of San Juan climate; correlation and its blind spots; PCA; finding groups and outliers |
+| [Foundations — Linear Algebra](foundations/l18_concept_linear_algebra.qmd) | L18 | Vectors, dot products, and projection — the machinery behind correlation, PCA, and recommenders. Taught between L17 and L19 |
+| [VI — Recommender Systems](u06_recommender_systems/l22_concept_collaborative_filtering.qmd) | L22–L24 | Collaborative, content-based, and hybrid recommenders on MovieLens; how to evaluate them — closing with a **mini-project** on which one you would ship |
+| [VII — Social Networks](u07_social_networks/l25_concept_social_networks_graphs.qmd) | L25–L26 | Relationships as graphs; adjacency matrices and centrality; detecting communities |
+| [VIII — Governance](u08_governance/l27_concept_data_ethics.qmd) | L27–L28 | Data ethics through documented cases; GDPR, HIPAA, FERPA, and Puerto Rico law |
+
+## Running the labs
+
+Labs are Jupyter notebooks designed to run in **Google Colab** — free, in the browser,
+nothing to install. Every lab page carries an *Open in Colab* badge at the top; click it
+and the notebook opens ready to run.
+
+A few things worth knowing:
+
+- **Run the setup cells first.** Each lab opens with two of them: one installs the
+  libraries, one imports them and loads the data. Colab resets between sessions, so run
+  them every time you open a lab.
+- **Save your own copy.** Clicking the badge opens a read-only view of the course
+  notebook. Use *File · Save a copy in Drive* before you start working, or your edits are
+  lost when you close the tab.
+- **The data comes with the lab.** Datasets are bundled in the repository, with a live
+  download as fallback, so labs work without hunting for files.
+- **The lab pages on this site are read-only.** They show the code together with the
+  output it actually produced — useful for reading and review, but you learn this by
+  running it yourself.
+
+## What you will be able to do
+
+By the end of the course you should be able to:
+
+1. Describe what data science is, where it is applied, and how the steps of its process
+   fit together.
+2. Identify the challenges of large-scale data, and use Spark, SQL, NoSQL stores, and web
+   APIs to acquire and process it.
+3. Explore an unfamiliar dataset — choose the right chart, compute descriptive statistics,
+   and say what the two together reveal.
+4. Build features from raw and unstructured data, and use filters, decision trees, and
+   random forests to find what matters in them.
+5. Visualize spatial patterns, temporal patterns, relationships between variables, and
+   many variables at once; reduce dimensionality; detect outliers.
+6. Build and evaluate a recommender system, and analyze relationships between people as a
+   graph.
+7. Discuss the ethical, social, legal, and political stakes of data analytics, and cite
+   the laws and standards that govern data handling.
+
+## How you are assessed
+
+| | |
+|---|---|
+| **Retrieval quizzes** | Short multiple-choice, at the start of most sessions, on the previous lesson |
+| **Mini-projects** | Three applied deliverables, closing Units III, IV, and VI |
+| **Partial exams** | Exam I after Unit IV; Exam II after Unit VIII |
+| **Final exam** | Cumulative, during finals week |
+| **Final project** | An end-to-end data-science deliverable, assigned around week 9, presented during finals week |
+
+Relative weights are discussed and agreed on the first day of class.

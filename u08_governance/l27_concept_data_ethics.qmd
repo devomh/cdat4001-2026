@@ -186,14 +186,6 @@ No single right answer -- argue from the framework, and say which principle you 
 4. **Power.** A city deploys predictive policing trained on historical arrest data. Trace the feedback
    loop. Who benefits, who is harmed, and who can contest a patrol decision?
 
-- Why data work carries special ethical weight (scale, opacity, consequence). *(Understand, MC)* 
-- Sources of algorithmic bias (biased data, biased labels, feedback loops) -- identify one in a scenario. *(Understand / Apply, MC)* 
-- Why "fairness" is contested: different fairness criteria can conflict, so it is a value judgment, not a toggle. *(Analyze, MC)* 
-- What re-identification shows: anonymization is not deletion (aggregation + linkage). *(Understand / Analyze, MC)* 
-- Reasoning about a scenario with the principle framework / four-question checklist -- pick the soundest ethical analysis. *(Analyze / Evaluate, MC)* 
-
--->
-
 ## FAQ
 
 **Isn't following the law enough?**

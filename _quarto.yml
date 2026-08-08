@@ -8,12 +8,19 @@ project:
 website:
   title: "CDAT 4001 — Data Science"
   site-url: https://devomh.github.io/cdat4001-2026/
+  favicon: assets/cdat-owl.svg
   page-navigation: true
   sidebar:
     style: docked
     search: true
+    logo: assets/cdat-owl.svg
+    logo-alt: "CDAT program owl logo"
+    title: "CDAT 4001"    # the owl is the PROGRAM mark; this names the course
+    alignment: center     # centres the header (logo + title) only; nav stays left
+    collapse-level: 1     # units start collapsed; the one holding the current page auto-opens
     contents:
-      - index.qmd
+      - text: "Home"      # relabelled: the header title above already names the course
+        href: index.qmd
       - section: "Unit I — Introduction"
         contents:
           - u01_introduction/l01_concept_intro_data_science.qmd
@@ -48,17 +55,17 @@ website:
           - u04_data_mining/l14_concept_feature_selection_trees.qmd
           - u04_data_mining/l14_lab_feature_selection_trees.md
           - u04_data_mining/l15_lab_data_mining_mini_project.md
-      - section: "Unit V — Visualization"
+      - section: "Unit V — Visualization (L16–L17)"
         contents:
           - u05_visualization/l16_concept_spatial_visualization.qmd
           - u05_visualization/l16_lab_mapping_earthquakes.md
           - u05_visualization/l17_concept_temporal_visualization.qmd
           - u05_visualization/l17_lab_san_juan_climate.md
-      - section: "Foundations — Linear Algebra"
+      - section: "Foundations — Linear Algebra (L18)"
         contents:
           - foundations/l18_concept_linear_algebra.qmd
           - foundations/l18_lab_linear_algebra.md
-      - section: "Unit V — Visualization (continued)"
+      - section: "Unit V — Visualization (L19–L21)"
         contents:
           - u05_visualization/l19_concept_correlation.qmd
           - u05_visualization/l19_lab_correlation.md
@@ -90,6 +97,7 @@ website:
 format:
   html:
     theme: cosmo
+    css: styles.css
     mermaid:
       theme: neutral      # default theme gives dark subgraph fills (unreadable in light mode)
     toc: true
