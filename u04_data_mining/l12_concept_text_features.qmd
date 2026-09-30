@@ -105,8 +105,11 @@ refinements come with the move:
 ## Move 3: TF-IDF — Weighting the Counts
 
 Raw counts have a bias: they reward words for being common, but the words that *identify* a document are
-the ones common **in it** and rare **everywhere else**. In our toy corpus "free" appears in two of three
-messages -- knowing a message contains "free" narrows things down less than knowing it contains "prize".
+the ones common **in it** and rare **everywhere else**. In our toy corpus "free" appears in two of the
+three messages, while "prize" appears only in msg 1. If you're told a message contains "prize", you know
+exactly which message it is; if you're told it contains "free", it could be msg 1 or msg 2. Note that no
+spam/ham labels are involved: TF-IDF only looks at how words are spread across documents, not at what
+class the documents belong to.
 
 **TF-IDF** (term frequency -- inverse document frequency) rescales each count by how rare the word is
 across the collection:
@@ -123,7 +126,22 @@ $$
 $$
 
 The logarithm is the intuition: a word in *every* document gets $\log(N/N) = \log 1 = 0$ -- no weight at
-all -- while a word in one document out of many gets the largest boost. Run it on the same toy corpus:
+all -- while a word in one document out of many gets the largest boost. ($\log$ here is the natural
+log, $\ln$.)
+
+**Worked example -- "free" vs "prize" in msg 1.** The toy corpus has $N = 3$ messages. Both words occur
+once in msg 1, so $\mathrm{tf} = 1$ for each; they differ only in how many messages contain them:
+
+$$
+\begin{aligned}
+\mathrm{tfidf}(\text{free}, \text{msg 1}) &= 1 \cdot \ln\frac{3}{2} \approx 0.41 \\
+\mathrm{tfidf}(\text{prize}, \text{msg 1}) &= 1 \cdot \ln\frac{3}{1} \approx 1.10
+\end{aligned}
+$$
+
+Same raw count, but "prize" ends up with about 2.7 times the weight of "free", because "prize" appears in
+one message and "free" in two. scikit-learn's `TfidfVectorizer` computes a slightly different version of
+this formula (the Deep Dive below walks through the exact arithmetic), which gives:
 
 | | are | for | free | lunch | never | now | or | prize | win | you |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -144,6 +162,22 @@ in every document from being zeroed out entirely. Each document's vector is then
 (L2 norm), which is why the toy values are decimals below 1 even for count-1 words, and why a word's weight
 in a message depends on what *else* that message contains. The intuition -- common everywhere means
 down-weighted -- is unchanged.
+
+Here is msg 1's row reproduced by hand ($N = 3$). Msg 1 contains four vocabulary words ("a" was dropped
+by the tokenizer), each once:
+
+1. **Smoothed IDF.** "free" and "now" each appear in 2 messages; "prize" and "win" each appear in 1:
+   $$
+   \begin{aligned}
+   \mathrm{idf}(\text{free}) = \mathrm{idf}(\text{now}) &= \ln\tfrac{4}{3} + 1 \approx 1.29 \\
+   \mathrm{idf}(\text{prize}) = \mathrm{idf}(\text{win}) &= \ln\tfrac{4}{2} + 1 \approx 1.69
+   \end{aligned}
+   $$
+2. **Multiply by tf** (all 1 here): msg 1 = [free 1.29, now 1.29, prize 1.69, win 1.69].
+3. **Vector length:** $\sqrt{1.29^2 + 1.29^2 + 1.69^2 + 1.69^2} = \sqrt{9.05} \approx 3.01$.
+4. **Divide by the length:** free $= 1.29 / 3.01 \approx$ **0.43**, prize $= 1.69 / 3.01 \approx$
+   **0.56** -- the values in the table. "now" gets the same 0.43 as "free" because it also appears in
+   two messages.
 :::
 
 ## When to Use Which
