@@ -5,7 +5,7 @@ lesson: "14"
 type: concept
 tags: [feature-selection, decision-trees, random-forests, feature-importance, classification, data-mining]
 difficulty: introductory
-duration: "75 mins"
+duration: "85 mins"
 ---
 
 ## Learning Objectives
@@ -13,7 +13,7 @@ duration: "75 mins"
 By the end of this lesson you will be able to:
 
 - **Explain** the honest yardstick -- a train/test split and accuracy read against a majority baseline. *(Understand)*
-- **Train** a shallow decision tree, **read** its splits in plain language, and **see** it select features. *(Apply / Analyze)*
+- **Train** a shallow decision tree, **read** its splits in plain language and as regions of the feature space, and **see** it select features. *(Apply / Analyze)*
 - **Compare** the accuracy of a selected feature set against the full matrix and the baseline. *(Analyze)*
 - **Describe** how a random forest aggregates trees, and **judge** the accuracy-versus-readability trade. *(Understand / Evaluate)*
 
@@ -105,6 +105,32 @@ gain"). scikit-learn's default uses a close cousin called the Gini impurity -- s
 compute.
 :::
 
+## Trees Cut the Plane into Rectangles
+
+With two numeric features you can watch a tree work. Take fourteen invented messages, each described by
+`digit_count` and `length` (9 ham, 5 spam) -- the lab's Step 1 builds exactly this example -- and grow a
+tree two questions deep:
+
+![The depth-2 toy tree and the regions it draws. Left: the root asks digit_count <= 4.5; its True branch is a ham leaf holding 7 messages; its False branch asks length <= 170 and splits the other 7 into a spam leaf of 5 and a ham leaf of 2. Right: the same tree on a digit_count-by-length plane -- a vertical dashed line at digit_count 4.5 and, only to its right, a horizontal dashed line at length 170. The left strip and the upper-right block are shaded orange for ham, the lower-right block blue for spam, and all 9 ham circles and 5 spam triangles sit in a region of their own class.](assets/l14_toy_regions.png)
+
+**Reading the figure:** scikit-learn always phrases a question as `<=`, with the "True" answer going left
+-- the same question as the six-message tree's `digit_count > 4`, turned around. Every question is a
+straight cut parallel to an axis: `digit_count <= 4.5` is the vertical line, `length <= 170` the
+horizontal one. Each leaf of the tree is one rectangle of the plane,
+shaded by the class it predicts, and a new message gets the class of the rectangle it lands in: the border
+between the shades is the tree's **decision boundary**. Notice that the horizontal cut stops at the
+vertical one, because the `length` question is asked only inside the "many digits" branch. And the tree has
+three leaves, not four: the few-digits side is already all ham, so there is nothing left to split.
+
+Now the link to L13's blind spot. Judged by its best single question, `length` is worthless here: that cut
+scores 64.3% (9 of 14), exactly the always-ham baseline. Yet once the tree knows a message has many digits,
+`length` separates spam from ham perfectly -- the short ones are spam, the long ones ham. What a feature is
+worth can depend on the answers to other questions, and a tree, which asks each question *given* the
+answers above it, sees that. This is a milder case than L13's exclusive-or, where *both* features look
+useless alone: here `digit_count` is strong by itself, so it earns the
+first question and opens the door for `length`. On the real messages `length` is strong alone as well --
+chi-square ranks it second -- so the toy isolates the effect rather than copying the data.
+
 ## Random Forests: Many Trees, One Vote
 
 One tree is readable but jumpy: a slightly different training sample can change an early split and reshuffle
@@ -148,7 +174,7 @@ Three different methods named which features matter, and they largely agree:
 
 - **L13's chi-square filter** ranked `digit_count`, `length`, then free, txt, claim, www, prize.
 - **The tree's nodes** spend their three questions on `digit_count`, `www`, `mobile`, `length`.
-- **The forest's importance** ranks `digit_count`, `length`, free, txt, www, claim.
+- **The forest's importance** ranks `digit_count`, `length`, free, txt, claim, www.
 
 A filter scores features alone; a tree picks them in combination; a forest averages over hundreds of trees.
 That three unrelated procedures crown the same handful -- `digit_count` and `length` first every time -- is
@@ -181,7 +207,7 @@ strong evidence those features carry the real signal, not an artifact of one met
 
 **"Why not just keep all 2,003 features? Storage is cheap."** -- Storage is cheap; *attention* is not. Every
 kept feature is a column someone must compute for every future message, a knob that can drift, and a chance
-for the model to learn an accidental pattern. The lab's forest rates 1,280 of the 2,003 features below
+for the model to learn an accidental pattern. The lab's forest rates 1,286 of the 2,003 features below
 0.0001 importance -- most of that matrix is dead weight.
 
 **"The forest got 99.0% -- are we done?"** -- Not quite, for two honest reasons. First, accuracy treats
@@ -200,6 +226,7 @@ fills a course of its own.
 | Situation | Move | Call |
 |---|---|---|
 | Need an honest score for a feature set | train/test split + accuracy vs baseline | `train_test_split(stratify=y)`, `.score` |
+| Want to see how a tree decides | draw it, and paint its predictions on a grid | `plot_tree`, `predict` on a `meshgrid` |
 | Deliverable is a readable rule | shallow tree, then read it | `DecisionTreeClassifier(max_depth=3)`, `export_text` |
 | Accuracy first, a driver list second | random forest + importances | `RandomForestClassifier`, `.feature_importances_` |
 | Tempted to select on all the data | don't -- fit the selector on train only | `SelectKBest(...).fit(X_train, y_train)` |
