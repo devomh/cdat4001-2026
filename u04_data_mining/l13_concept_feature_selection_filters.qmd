@@ -5,7 +5,7 @@ lesson: "13"
 type: concept
 tags: [feature-selection, filter-methods, chi-square, mutual-information, variance-threshold, data-mining]
 difficulty: introductory
-duration: "75 mins"
+duration: "85 mins"
 ---
 
 ## Learning Objectives
@@ -14,7 +14,7 @@ By the end of this lesson you will be able to:
 
 - **Explain** why selecting a few informative features beats keeping thousands of weak ones. *(Understand)*
 - **Rank** features with a chi-square filter and **interpret** the top and bottom of the ranking. *(Apply / Analyze)*
-- **Apply** a variance-threshold and a mutual-information filter, and **say** what each one adds. *(Apply)*
+- **Apply** a variance-threshold and a mutual-information filter, **say** what each one adds, and **choose** the filter a column's type and values allow. *(Apply)*
 - **Identify** the filter blind spot -- a feature judged alone can hide an interaction. *(Analyze / Evaluate)*
 
 > **Hands-on:** [Lab — From 2,003 Features to the 30 That Matter](l13_lab_feature_selection_filters.md) ·
@@ -64,7 +64,7 @@ We will use three: one that needs no label at all, and two that score against it
 The cheapest filter ignores the label entirely: **drop the columns that barely vary.** A word that appears
 in almost no messages is a column of almost all zeros -- near-constant, and a constant cannot help separate
 anything. `VarianceThreshold` removes them. On the SMS matrix, dropping columns with variance below `0.001`
-cuts **2,003 features to 1,483** in one line -- 520 near-dead columns gone before any label-based scoring
+cuts **2,003 features to 1,482** in one line -- 521 near-dead columns gone before any label-based scoring
 begins. Use it as a first triage, not a final answer: a rare word can still be a perfect spam tell.
 
 ## Chi-Square
@@ -88,16 +88,28 @@ scikit-learn's `chi2` applies the same idea to the count values and ranks all 2,
 
 **Reading the figure:** the three features *you handcrafted in L11/L12* -- `digit_count`, `length`,
 `exclam_count` -- all rank in the top five, with `digit_count` and `length` ahead of every one of the 2,000
-vocabulary columns. `digit_count` scores far higher than `free`, the best word. The vocabulary entries that
-do rank high read like a parody of spam: free, txt, claim, www, prize. **Domain insight beat the machinery,
-again.** Keep the top 30 with `SelectKBest(chi2, k=30)` and you hold the spam-indicative core; the bottom of
+vocabulary columns. The vocabulary entries that do rank high read like a parody of spam: free, txt, claim,
+www, prize.
+
+**Read the size of the gap with care, though.** A word column counts a word a handful of times at most;
+`length` counts characters, in the hundreds. scikit-learn's chi-square treats every value as a count, so a
+column of bigger numbers earns a bigger score: measure `length` in hundreds of characters instead and its
+score drops from 36,303 to 363 -- from 2nd place to 18th, below `free`. Chi-square scores compare fairly
+only among columns of the same kind (word counts with word counts, flags with flags), not between a word
+count and a character count. Whether the handcrafted features really lead is a job for a second filter that ignores units -- mutual
+information, below -- and it says yes.
+
+Keep the top 30 with `SelectKBest(chi2, k=30)` and you hold the spam-indicative core; the bottom of
 the list ("30", "fri", "try") scores `0.000` -- words that fall equally on both classes and carry no
 information.
 
 ::: {.callout-warning title="Chi-square needs non-negative features"}
 Chi-square reasons about counts, so columns holding negative values (differences, anything centered at
-zero) break its math and scikit-learn will refuse. Counts, lengths, and 0/1 indicators are all safe; for
-general numeric features, use a different filter score (mutual information, below).
+zero) break its math and scikit-learn will refuse. Counts, lengths, and 0/1 indicators are all safe from
+that error. But because chi-square treats every value as a count, on a *measurement* its score follows how
+big the numbers are -- the unit, and even where zero sits -- rather than how well the column separates the
+classes: a column in grams outscores the same column in kilograms a thousandfold. Use chi-square for counts,
+flags, and one-hot columns; rank measurements with mutual information (below).
 :::
 
 ## Mutual Information
@@ -106,7 +118,15 @@ general numeric features, use a different filter score (mutual information, belo
 label -- the *shared information* between the two. It needs no assumption about counts and catches
 associations a chi-square test can miss (including non-monotonic ones). On the SMS matrix,
 `mutual_info_classif` produces its own ranking: `digit_count` (0.30) and `length` (0.17) on top, then txt,
-exclam_count, free, claim, www, mobile, prize.
+exclam_count, free, claim, www, mobile, prize. Mutual information does not care about units, so this settles
+the question chi-square left open: `digit_count` and `length` lead on their merits, far ahead of the best
+word (txt, 0.05). **Domain insight beat the machinery, again** -- chi-square only exaggerated by how much.
+
+One setting needs care. `discrete_features=True` tells scikit-learn to treat every distinct value as its
+own category -- right for flags, small counts, and one-hot columns. A column with hundreds of distinct
+values can then earn a score by pure chance: a column of random numbers with 900 different values scores
+about 0.09, more than txt. `length` has 273 distinct values; scored as a continuous measurement instead
+it gets 0.15 rather than 0.17 and keeps 2nd place, so the ranking holds.
 
 The striking part is the agreement. Chi-square and mutual information share no machinery -- one compares
 observed to expected counts, the other measures shared information -- yet of their top ten features, **nine
@@ -126,12 +146,24 @@ exactly what a decision tree does -- and it is the subject of **L14**.
 
 ## When to Use Which Filter
 
-- **Variance threshold** -- always a cheap first cut: drop near-constant columns before anything else. It
-  needs no label, but it also cannot tell a useful column from a useless one that happens to vary.
-- **Chi-square** -- the default for **count / non-negative** features against a categorical label (bag of
-  words, indicator flags). Fast, interpretable, model-free triage from thousands to dozens.
-- **Mutual information** -- when features are not counts, or when an association might be non-monotonic; a
-  good second opinion on a chi-square ranking.
+Before running any filter, look at each column: what kind of values does it hold, and on what scale? The
+table says which filter each kind of column allows; the lab's Exercise 1 puts it to work on a new dataset.
+
+| Filter | Columns it fits | Watch out |
+|---|---|---|
+| **Variance threshold** -- needs no label | Any numeric column, any values | The cutoff is in the column's squared units, so one threshold only makes sense when columns share a scale (counts, 0/1 flags). After standardizing, every non-constant column has variance 1, so the threshold can no longer tell them apart. |
+| **Chi-square** -- needs a category label | Counts, 0/1 flags, one-hot categories; **non-negative only** | One-hot encode text categories first. It treats values as counts: on measurements the score follows the size of the numbers (unit and zero point), so rank measurements with MI. |
+| **Mutual information** -- needs a category label | Any numeric column; negatives allowed | Mark columns as discrete only for flags, small counts and one-hot columns. Continuous scores are estimated: set a random seed. |
+
+Chi-square and mutual information both score against a **category** label (spam/ham, a species). A
+numeric label -- a price, a temperature -- needs the regression version of mutual information
+(`mutual_info_regression`) or a correlation filter, which waits for **L19**; neither is used here.
+
+In practice: run the **variance threshold** as a cheap first cut when columns share a scale; use
+**chi-square** as the fast default for counts and flags (bag of words, indicators); use **mutual
+information** for measurements, mixed scales, or a possibly non-monotonic link -- and as a second opinion on
+any chi-square ranking.
+
 - **Avoid selection entirely** when you already have few features (L10's twelve Ames columns need no
   triage), or when a regulation or scientific question requires keeping a specific variable regardless of
   its score.
@@ -142,8 +174,9 @@ exactly what a decision tree does -- and it is the subject of **L14**.
   moment you *feed selected features to a model and grade it* (that is **L14**), the selector must be fit on
   the training data only -- rank on everything and the test set has already leaked its preferences into the
   selection. Fit the selector like any other learned step.
-- **Chi-square on negative values.** It needs counts; centered or differenced columns break it. Use mutual
-  information instead.
+- **Chi-square on negative values -- or on measurements.** It needs counts; centered or differenced
+  columns break it, and on a measurement the score follows the size of the numbers: a column in grams
+  outscores the same column in kilograms. Rank measurements with mutual information.
 - **Reading a ranking as causation.** "digit_count ranks first" means it *separates the classes in this
   collection*, not that digits cause spam. A spammer who spells out "oh-eight-hundred" defeats the feature
   without changing the message.
@@ -166,6 +199,7 @@ features while seeing them together, and the two rankings make a stronger case t
 
 | Situation | Move | Call |
 |---|---|---|
+| Before any filter | check each column's type, values and scale | the table in *When to Use Which Filter* |
 | Columns that barely vary | drop them first (label-free) | `VarianceThreshold(threshold=...)` |
 | Thousands of count features vs a label | chi-square rank, keep top k | `SelectKBest(chi2, k=...)` |
 | Non-count features, or a non-monotonic link | mutual information | `mutual_info_classif` |

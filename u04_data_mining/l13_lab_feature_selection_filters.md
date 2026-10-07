@@ -5,13 +5,13 @@ lesson: "13"
 type: lab
 tags: [feature-selection, chi-square, mutual-information, variance-threshold, sklearn]
 difficulty: introductory
-duration: "75 mins"
+duration: "85 mins"
 ---
 
 **Goal:** take the 5,574 x 2,003 feature matrix you built in L12 and find the features that actually
 matter -- without training any model. Drop the near-constant columns, rank the rest with a chi-square
-filter, and confirm the leaders with a second, unrelated filter (mutual information). Pairs with the
-concept note [Feature Selection I: Filter Methods](l13_concept_feature_selection_filters.qmd).
+filter, and confirm the leaders with a second, unrelated filter (mutual information). Then carry the
+filters to a new dataset, where they do not all apply. Pairs with the concept note [Feature Selection I: Filter Methods](l13_concept_feature_selection_filters.qmd).
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u04_data_mining/l13_lab_feature_selection_filters.ipynb)
 
@@ -98,7 +98,7 @@ Variance threshold kept 1482 of 2003 features
 ~~~
 </details>
 
-> **Read it:** 520 near-dead columns gone in one line, before any label-based scoring. This is a first
+> **Read it:** 521 near-dead columns gone in one line, before any label-based scoring. This is a first
 > triage, not a final answer -- a rare word can still be a perfect spam tell, so we score the survivors
 > against the label next.
 
@@ -109,7 +109,9 @@ than chance would predict? One call scores all 2,003 candidates.
 
 ```python
 scores, _ = chi2(X, y)
-ranking = pd.Series(scores, index=feature_names).sort_values(ascending=False)
+# kind="stable": tied scores keep a fixed (alphabetical) order
+ranking = pd.Series(scores, index=feature_names)
+ranking = ranking.sort_values(ascending=False, kind="stable")
 print(ranking.head(15).round(1))
 ```
 
@@ -136,9 +138,14 @@ dtype: float64
 </details>
 
 > **Read it:** the three features *you handcrafted in L11/L12* -- `digit_count`, `length`, `exclam_count`
-> -- all rank in the top five, ahead of 1,998 of the 2,000 vocabulary columns. `digit_count` scores far
-> higher than `free`, the best word. The vocabulary that does rank high reads like a parody of spam: free,
-> txt, claim, www, prize. Domain insight beat the machinery, again.
+> -- all rank in the top five, ahead of 1,998 of the 2,000 vocabulary columns. The vocabulary that does
+> rank high reads like a parody of spam: free, txt, claim, www, prize.
+>
+> **But read the size of the gap with care.** A word column counts a word a handful of times; `length`
+> counts characters, in the hundreds. Chi-square treats every value as a count, so a column of bigger
+> numbers earns a bigger score: measured in hundreds of characters, `length` would score 363 and drop from
+> 2nd place to 18th. Chi-square scores compare fairly only among columns of the same kind (word counts with
+> word counts). Step 3 checks the leaders with a filter that ignores units.
 
 Keep the top 30 with `SelectKBest`:
 
@@ -160,29 +167,33 @@ Kept 30 of 2003 features:
 The other end of the ranking is just as instructive. Which features are most useless?
 
 ```python
-# COMPLETION: show the 10 LOWEST-scoring features. Sort the ranking from smallest to
-# largest, then take the first 10. Fill the ____ and uncomment both lines.
-# weakest = ranking.sort_values(ascending=____).head(10)
+# COMPLETION: show the 10 LOWEST-scoring features.
+# Sort from smallest to largest, then take the first 10.
+# Fill the ____ and uncomment the three code lines.
+# weakest = ranking.sort_values(ascending=____,
+#                               kind="stable").head(10)
 # print(weakest.round(3))
 ```
 
 <details><summary>Expected Output (after completing <code>True</code>)</summary>
 
 ~~~text
-30          0.000
-fri         0.000
-try         0.000
-luv         0.002
-stay        0.003
-id          0.003
-midnight    0.005
-january     0.005
-internet    0.005
-cal         0.005
+30            0.000
+fri           0.000
+try           0.000
+luv           0.002
+id            0.003
+stay          0.003
+cal           0.005
+changed       0.005
+definitely    0.005
+feb           0.005
 dtype: float64
 ~~~
 *(The word "30" scores 0.000 to three decimals: it appears at almost exactly the same rate in spam and ham,
-so it carries essentially no information about the label. A column can be frequent and still be worthless.)*
+so it carries essentially no information about the label. A column can be frequent and still be worthless.
+Several scores are exact ties -- "30"/"fri", "id"/"stay", and the last four rows, which are 4 of 17 words
+tied at 0.005. The stable sort keeps tied words in alphabetical order, so everyone sees the same list.)*
 </details>
 
 ## Step 3: Mutual Information -- A Second, Unrelated Opinion (Worked)
@@ -231,28 +242,149 @@ Shared in both top-10s: 9 of 10
 </details>
 
 > **Read it:** chi-square and mutual information share no machinery, yet nine of their top ten features are
-> the same. That agreement is evidence the leaders are real signal, not an artifact of one method.
+> the same. That agreement is evidence the leaders are real signal, not an artifact of one method. And
+> mutual information ignores units, so it settles Step 2's question: `digit_count` and `length` lead on
+> their merits, far ahead of the best word. Domain insight beat the machinery, again -- chi-square only
+> exaggerated by how much.
+>
+> **One caveat about `discrete_features=True`:** it treats every distinct value as a category. That suits
+> word counts and flags, but `length` has 273 distinct values, and a many-valued column can pick up score
+> by chance. Scored as a continuous measurement instead, `length` gets 0.15 rather than 0.17 -- still
+> 2nd, so the ranking stands.
 
 ## Your Turn
 
-### Exercise 1 -- How few features hold the signal?
+> **Before the exercises:** the concept note's table in *When to Use Which Filter* lists, for each filter,
+> which columns it accepts and what to watch out for. Exercise 1 needs it.
 
-Re-run `SelectKBest(chi2, k=...)` with `k=10` and print the kept features sorted. Compare to the k=30 list
-above: are the strongest features stable, or does the membership churn?
+### Exercise 1 -- New data, same filters
+
+The SMS matrix is a friendly case: every column is a non-negative count, so all three filters apply. Real
+tables are rarely that tidy. Here is one you know from L08 -- the **Palmer Penguins** (Gorman, Williams &
+Fraser 2014; CC0 public domain), bundled as `data/penguins.csv` with the same seaborn-data fallback as
+L08. The label is `species`. Which columns tell the three species apart -- and which filter may you use to
+find out? Run the setup cell first.
 
 ```python
-# Your Turn 1: keep the top 10 by chi-square and print them sorted.
-# kept10 = feature_names[SelectKBest(chi2, k=10).fit(X, y).get_support()]
-# print(sorted(kept10))
+# Your Turn 1, setup: load the penguins, drop incomplete rows
+P_LOCAL = "data/penguins.csv"
+P_URL = ("https://raw.githubusercontent.com/mwaskom/"
+         "seaborn-data/master/penguins.csv")
+peng = pd.read_csv(P_LOCAL if os.path.exists(P_LOCAL) else P_URL)
+peng = peng.dropna()
+# the four measurement columns, used in parts (b) and (c)
+num = ["bill_length_mm", "bill_depth_mm",
+       "flipper_length_mm", "body_mass_g"]
+print(peng.shape)
+print(peng["species"].value_counts())
+print(peng.dtypes)
 ```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+(333, 7)
+species
+Adelie       146
+Gentoo       119
+Chinstrap     68
+Name: count, dtype: int64
+species               object
+island                object
+bill_length_mm       float64
+bill_depth_mm        float64
+flipper_length_mm    float64
+body_mass_g          float64
+sex                   object
+dtype: object
+~~~
+</details>
+
+**(a) Read the columns first.** Six columns could be features: `island`, the four measurements, and `sex`.
+Using the table, decide which filter(s) fit each one, and why the others do not. Write your answer before
+running anything.
 
 <details><summary>Answer</summary>
 
+- **The four measurements** (`bill_length_mm`, `bill_depth_mm`, `flipper_length_mm`, `body_mass_g`) are
+  continuous and non-negative, in mm and g. **Mutual information** fits. Chi-square will run (nothing is
+  negative), but it treats the measurements as counts, so its scores follow how big the numbers are, not
+  how well each column separates the species. A variance threshold is meaningless here: body mass has a
+  variance of about 648,000 (grams squared), bill depth about 3.9 (mm squared), so no single cutoff means
+  the same thing for both.
+- **`island` and `sex`** are text categories. No filter takes text: **one-hot encode** them first (L11).
+  The 0/1 columns that result are what **chi-square** is built for (mutual information with
+  `discrete_features=True` would fit too).
+
+</details>
+
+**(b) Chi-square on the four measurements.** Score them against `species`. Then measure body mass in
+kilograms instead of grams and score it again. **Before running:** which column do you expect chi-square to
+put first, and why? Then fill the two `____` and uncomment.
+
+```python
+# Your Turn 1(b): chi-square on the measurements
+# chi_g = ____(peng[num], peng["species"])[0]
+# chi_rank = pd.Series(chi_g, index=num)
+# print(chi_rank.sort_values(ascending=False).round(1))
+# mass_kg = peng["body_mass_g"] / ____
+# print("body mass in kg:",
+#       chi2(mass_kg.to_frame(), peng["species"])[0].round(1))
+```
+
+<details><summary>Answer (blanks: <code>chi2</code>, <code>1000</code>)</summary>
+
 ~~~text
-['claim', 'digit_count', 'exclam_count', 'free', 'length', 'mobile', 'prize', 'stop', 'txt', 'www']
+body_mass_g          34511.1
+flipper_length_mm      251.4
+bill_length_mm         159.5
+bill_depth_mm           50.7
+dtype: float64
+body mass in kg: [34.5]
 ~~~
-The strongest features are a stable core: every one of these ten is also in the k=30 list. Selection does
-not reshuffle the leaders as you change k -- it extends a settled ranking.
+Body mass "wins" by a mile -- because grams are big numbers. In kilograms the same column scores 34.5,
+below bill depth's 50.7: from first place to last. Same penguins, same information; the ranking was set by
+the unit. Even the three mm columns are not comparable: flippers measure about 200 mm, bill depths about
+17 mm, and chi-square rewards big numbers -- subtract 13 mm from every bill depth and its score jumps from
+50.7 to 209.1, with not one penguin changed. This is the table's chi-square warning: on measurements the
+score follows the size of the numbers, so rank them with mutual information.
+</details>
+
+**(c) Mutual information, and the two text columns.** Score the measurements with mutual information
+(they are continuous, so leave `discrete_features` at its default), then one-hot encode `island` and `sex`
+and score those with chi-square. Fill the two `____` and uncomment.
+
+```python
+# Your Turn 1(c): MI on the measurements, chi2 on categories
+# mi_p = ____(peng[num], peng["species"], random_state=0)
+# mi_rank = pd.Series(mi_p, index=num)
+# print(mi_rank.sort_values(ascending=False).round(3))
+# cats = pd.____(peng[["island", "sex"]], dtype=int)
+# chi_c = chi2(cats, peng["species"])[0]
+# print(pd.Series(chi_c, index=cats.columns).round(1))
+```
+
+<details><summary>Answer (blanks: <code>mutual_info_classif</code>, <code>get_dummies</code>)</summary>
+
+~~~text
+flipper_length_mm    0.603
+bill_depth_mm        0.575
+bill_length_mm       0.531
+body_mass_g          0.501
+dtype: float64
+island_Biscoe       107.2
+island_Dream        117.2
+island_Torgersen     60.2
+sex_FEMALE            0.0
+sex_MALE              0.0
+dtype: float64
+~~~
+Body mass goes from **first** under chi-square to **last** under mutual information, which ignores units --
+trust MI here. The four MI scores are close, so do not read much into flipper beating bill depth: every
+measurement carries real information about the species. `island` scores high (Torgersen has only Adelie
+penguins; no Gentoo lives on Dream). `sex` scores 0.0 (0.02 before rounding): every species has almost
+exactly as many females as males (73/73, 34/34, 58/61), so a penguin's sex says nothing about its
+species -- the penguin version of SMS's word "30".
 </details>
 
 ### Exercise 2 -- See the blind spot
@@ -265,8 +397,11 @@ is 1 exactly when the flags *disagree* -- and score each flag with both filters.
 # combos = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 # Xtoy = csr_matrix(np.repeat(combos, 100, axis=0))
 # ytoy = Xtoy.toarray()[:, 0] ^ Xtoy.toarray()[:, 1]
-# print("chi2 per flag:", [round(v, 4) for v in chi2(Xtoy, ytoy)[0]])
-# print("MI per flag:  ", [round(v, 4) for v in mutual_info_classif(Xtoy, ytoy, discrete_features=True, random_state=0)])
+# s_chi = chi2(Xtoy, ytoy)[0]
+# s_mi = mutual_info_classif(Xtoy, ytoy, discrete_features=True,
+#                            random_state=0)
+# print("chi2 per flag:", [round(float(v), 4) for v in s_chi])
+# print("MI per flag:  ", [round(float(v), 4) for v in s_mi])
 ```
 
 <details><summary>Answer</summary>
@@ -293,9 +428,10 @@ in 3-4 sentences, naming at least one reason a low-scoring feature might still b
 | Move | Key command | What you learned |
 |------|-------------|------------------|
 | Variance threshold | `VarianceThreshold(threshold=0.001)` | Drop near-constant columns label-free (2003 -> 1482) |
-| Chi-square rank | `chi2`, `SelectKBest(k=30)` | Your handcrafted features top all 2,000 words |
+| Chi-square rank | `chi2`, `SelectKBest(k=30)` | `digit_count` and `length` lead (MI confirms; chi-square's gap is partly units) |
 | Read the bottom | `ranking.sort_values()` | A word balanced across classes ("30", "fri") scores 0.000 |
 | Second opinion | `mutual_info_classif` | An unrelated filter crowns 9 of the same top 10 |
+| New dataset | penguins: `chi2` vs `mutual_info_classif` | Check column types first; chi-square ranks by units (body mass 1st in g, last in kg) |
 | The blind spot | XOR toy | Filters miss features that only work together |
 
 Next (**L14**): hand these features to a model that sees them *together* -- a decision tree you can read
