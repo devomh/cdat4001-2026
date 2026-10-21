@@ -26,10 +26,10 @@ course and with a live download fallback:
 
 - **Weather record:** NOAA NCEI Global Historical Climatology Network -
   Daily, station `RQW00011641` (San Juan Luis Munoz Marin International
-  Airport). Daily maximum temperature (TMAX, C), minimum temperature
-  (TMIN, C), and precipitation (PRCP, mm), 1960-01-01 to 2024-12-31.
-  US-government work, public domain. Note the fallback URL: it is a plain
-  web API with query parameters, exactly the L06 pattern.
+  Airport), 1960-01-01 to 2024-12-31. US-government work, public domain.
+  The columns are described in **Know the Columns**, right after setup.
+  Note the fallback URL: it is a plain web API with query parameters,
+  exactly the L06 pattern.
 
 There is no randomness in this lab -- every number is fully deterministic,
 so no seed is needed.
@@ -84,14 +84,55 @@ DATE
 > the row labels, which is what unlocks everything below (date slicing,
 > resampling, rolling windows). One row per day since January 1960.
 
-## Step 1: One Thermometer, 23,742 Rows (Worked)
+## Know the Columns
 
-First, a single working variable: the **daily mean temperature**, midway
-between the day's high and low. Deriving it is a handcrafted feature --
-exactly L11's move, one line.
+Before reading any pattern, know what each column measures:
+
+| Column | Meaning | Units and values |
+|--------|---------|------------------|
+| `STATION` | the GHCN-Daily station id; one station, so the same in every row | `RQW00011641` (San Juan airport) |
+| `DATE` | the observation day; it becomes the **index** after `set_index` | 1960-01-01 to 2024-12-31, one row per day |
+| `TMAX` | the day's highest air temperature | degrees C |
+| `TMIN` | the day's lowest air temperature | degrees C |
+| `PRCP` | the day's total precipitation (rain) | mm |
+| `TMID` | *derived in Step 1*: (TMAX + TMIN) / 2 | degrees C |
+
+Check the ranges yourself:
 
 ```python
-weather["TMID"] = (weather["TMAX"] + weather["TMIN"]) / 2   # daily mean temperature
+print(weather[["TMAX", "TMIN", "PRCP"]].describe().loc[["min", "max"]])
+print("Share of days with no rain:", round((weather["PRCP"] == 0).mean(), 2))
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+     TMAX  TMIN   PRCP
+min  22.8  16.1    0.0
+max  36.7  28.3  234.4
+Share of days with no rain: 0.44
+~~~
+</details>
+
+> **Read it:** the station recorded in US units; the archive stores the
+> values converted to metric. Every temperature was a whole degree
+> Fahrenheit, so the Celsius values move in steps of 0.5-0.6 (28.9, 29.4,
+> ...); the record high of 36.7 C is 98 F. Every rain value was a whole
+> hundredth of an inch. So do not read 0.1 C precision into these numbers.
+> And rain is zero on 44% of days: a rain series is mostly zeros with
+> occasional large values, unlike temperature.
+
+## Step 1: One Thermometer, 23,742 Rows (Worked)
+
+First, a single working variable: the day's **midpoint temperature**,
+halfway between its high and low. Strictly, that is not the average of
+all the day's readings, but it is a common convention in climate records
+for the daily mean, and the rest of this lab calls it the daily mean.
+Deriving it is a handcrafted feature -- exactly L11's move, one line.
+
+```python
+# Midpoint of the day's high and low, used as the daily mean
+weather["TMID"] = (weather["TMAX"] + weather["TMIN"]) / 2
 
 fig, ax = plt.subplots(figsize=(10, 3.5))
 weather["TMID"].plot(ax=ax, linewidth=0.3, color="steelblue")
@@ -184,7 +225,9 @@ regroups the rows into coarser time bins and aggregates each bin to one
 number. The aggregation is a *decision*, not a default -- temperature is a
 level, so a monthly value is the **mean**; rain accumulates, so a monthly
 value is the **sum**. (Average the daily rain instead and a hurricane
-month full of dry days looks unremarkable.)
+month full of dry days looks unremarkable.) When the question is about
+extremes, a third choice, the **max**, keeps each bin's single worst day;
+Exercise 2 uses it.
 
 ```python
 temp_m = weather["TMID"].resample("ME").mean()    # monthly MEAN temperature
@@ -203,6 +246,36 @@ Daily rows:   23742
 Monthly rows: 780
 Annual rows:  65
 ~~~
+</details>
+
+<details><summary>Reference: resample rules (Optional)</summary>
+
+The string inside `resample(...)` names the bins. The common ones, and
+how they behave on this dataset:
+
+| Rule | Bins | The label is | Watch out |
+|------|------|--------------|-----------|
+| `"D"` | days | the day | -- |
+| `"W"` | weeks | the Sunday that ends the week | here the last label is 2025-01-05, after the data ends |
+| `"ME"` / `"MS"` | months | the month's last / first day | why Step 5 looks up `'2017-09-30'` |
+| `"QE"` | quarters | the quarter's last day | calendar quarters (Jan-Mar, ...), not seasons |
+| `"YE"` / `"YS"` | years | the year's last / first day | -- |
+| `"7D"`, `"3ME"`, ... | multiples | -- | `"10YE"` is not calendar decades: its first bin holds only 1960, then 1961-1970, ..., and the last is labeled 2030. For decades, group by `weather.index.year // 10 * 10` |
+
+- **Old codes.** Older tutorials write `"M"`, `"Y"`, `"A"`, `"H"`, `"T"`.
+  pandas 2.x warns on each one ("'M' is deprecated and will be removed
+  in a future version, please use 'ME' instead."), and newer versions
+  may reject them outright; use `"ME"`, `"YE"`, `"h"`, `"min"`.
+- **The aggregation is a second, separate choice.** After `resample(...)`
+  comes `.mean()`, `.sum()`, `.max()`, `.min()`, `.median()`, `.count()`,
+  or several at once with `.agg(["sum", "max", "count"])`. `.count()` tells
+  you how many days filled each bin: a quick check for gaps.
+- **`resample` vs `groupby(index.month)`.** `resample("ME")` makes
+  consecutive bins along the timeline: 780 months, and January 1960 is a
+  different bin from January 1961. `groupby(index.month)` pools the same
+  calendar month across every year into 12 values. That is Step 4's
+  climatology.
+
 </details>
 
 Now look at the same thermometer at all three scales:
@@ -228,7 +301,8 @@ plt.show()
 > remains is a slow climb. **Each pattern is visible at exactly one scale
 > and invisible at the others.** Choosing the scale is choosing the
 > question; note also what coarsening *costs*: at the annual scale,
-> Hurricane Maria does not exist.
+> Hurricane Maria does not exist. (Exercise 2 shows how to keep it
+> visible in the rain record.)
 
 Your turn -- the annual rain series says which years were extreme:
 
@@ -354,9 +428,11 @@ plt.show()
 ```
 
 > **Read it:** 65 pale lines, one per year, and they trace the same arch --
-> cool start, August peak, cool finish -- so the cycle's **period** is 12
+> cool start, August peak, cool finish -- so the seasonal cycle's **period** is 12
 > months, read straight off the picture without ever consulting the
-> calendar. A repeating cycle like this is called **periodic**. Putting a
+> calendar. A pattern that repeats with a fixed period like this is
+> **periodic**, and in time-series analysis a periodic component is called
+> **seasonality**. Putting a
 > single *number* on that self-similarity -- the series' correlation with a
 > copy of itself shifted by 12 months, the **autocorrelation** -- needs the
 > correlation coefficient, which arrives in **L19**; we will measure
@@ -528,14 +604,22 @@ and noise removal removes events. The 365-day curve is pure trend; the
 heat wave that set the record is gone.)*
 </details>
 
-### Exercise 2 -- Hurricane hunting
+### Exercise 2 -- Hurricane hunting, two ways
 
-Print the five wettest single days of the record with `.nlargest()`. Three
-of them are famous hurricanes -- which? One sentence: is an extreme day
-always a named storm?
+**(a)** Print the five wettest single days of the record with
+`.nlargest()`. Three of them are famous hurricanes -- which? One sentence:
+is an extreme day always a named storm?
 
-> **Hint:** `weather["PRCP"].nlargest(5)`; then put the dates next to the
-> hurricane history of Puerto Rico (the concept note names the three).
+**(b)** Now coarsen first. Resample the daily rain to one value per year
+that keeps each year's *wettest day*, and print the five largest. Do the
+same five days survive? One sentence: why does this annual series keep
+them when Step 2's annual *total* (`rain_y`) cannot tell a storm year
+from a rainy one?
+
+> **Hint:** **(a)** `weather["PRCP"].nlargest(5)`; then check the dates
+> against Puerto Rico's hurricane history: Hugo (1989), Hortense (1996),
+> Maria (2017). **(b)** `resample("YE")` followed by the aggregation that
+> keeps the biggest value in each bin, then `.nlargest(5)` again.
 
 ```python
 # TODO: your code here
@@ -551,12 +635,26 @@ DATE
 2017-09-20    180.6
 1988-04-15    180.3
 Name: PRCP, dtype: float64
+
+DATE
+2013-12-31    234.4
+1989-12-31    224.5
+1996-12-31    208.3
+2017-12-31    180.6
+1988-12-31    180.3
+Name: PRCP, dtype: float64
 ~~~
-*(Hugo (1989-09-18), Hortense (1996-09-10), and Maria (2017-09-20) -- but
-the wettest day of all, July 18, 2013, was a no-name tropical downpour,
-and 1988-04-15 a spring flood. The honesty cut: Maria, the worst disaster,
-is only the #4 rain day at this gauge -- "worst" and "wettest at one
-station" are different questions.)*
+*(**(a)** Hugo (1989-09-18), Hortense (1996-09-10), and Maria (2017-09-20)
+-- but the wettest day of all, July 18, 2013, matches no named storm, and
+neither does April 15, 1988, outside hurricane season. So no: an extreme
+day needs no hurricane. The honesty cut: Maria, the worst
+disaster, is only the #4 rain day at this gauge -- "worst" and "wettest at
+one station" are different questions. **(b)** The same five values, now
+labeled by year-end: `weather["PRCP"].resample("YE").max()`. The max keeps
+each year's single worst day, while the sum adds that day to the other
+364, so a storm year and a merely rainy year can reach the same total --
+2017 is only the 6th wettest year by total, and the wettest, 2010, never
+had a day above 89.4 mm.)*
 </details>
 
 ### Exercise 3 -- Written: pick the one graphic
@@ -577,10 +675,12 @@ with its 12-month rolling mean, or Step 5's anomaly plot. Argue for one in
 |------|-------------|------------------|
 | Make it a time series | `parse_dates=`, `set_index`, `.loc["2017-09"]` | Timestamps as the index unlock date slicing |
 | Fill gaps time-aware | `.interpolate(method="time")` | Neighbors in time, not the column median (5 gap days; Maria's outage) |
+| Know the columns | `describe().loc[["min", "max"]]` | What each column measures, and how precisely (whole F, hundredths of an inch) |
 | Change scale | `.resample("ME").mean()` / `.sum()` | Each pattern is visible at one scale; mean for levels, sum for amounts |
+| Keep the extremes | `.resample("YE").max()`, `.nlargest(5)` | The max keeps each year's worst day; the sum mixes it in with the rest of the year |
 | Extract trend | `.rolling(12, center=True).mean()` | A 12-month window cancels the seasonal wave: +1.5 C since the 1960s |
 | Extract seasons | `.groupby(index.month).mean()` | The climatology: 3.2 C amplitude; rain peaks in November |
-| See the period | overlay each year's cycle on one axis | The cycle repeats every 12 months (a number for it -- autocorrelation -- in L19) |
+| See the period | overlay each year's cycle on one axis | The seasonal cycle repeats every 12 months (a number for it -- autocorrelation -- in L19) |
 | Compare series | z-score; anomaly vs climatology | Normalization makes units comparable and de-seasonalizes |
 
 Next lesson (L18): a linear-algebra primer -- the vectors and matrices the

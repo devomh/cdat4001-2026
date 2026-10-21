@@ -13,8 +13,8 @@ duration: "50 mins"
 By the end of this lesson you will be able to:
 
 - **Describe** what makes time-series data different — order carries information, timestamps become the index — and **identify** the three components of a series: trend, seasonality, noise. *(Understand)*
-- **Choose** a temporal scale (resampling daily to monthly to annual) appropriate to a question and **justify** the information trade-off. *(Apply / Analyze)*
-- **Identify** trend with rolling means, and seasonality and periodicity with the monthly climatology — the cycle that repeats with a fixed 12-month period. *(Apply)*
+- **Choose** a temporal scale (resampling daily to monthly to annual) appropriate to a question and **justify** the information trade-off, including the aggregation that keeps what the question needs — mean, sum, or max. *(Apply / Analyze)*
+- **Identify** trend with rolling means, and seasonality and periodicity with the monthly climatology — the seasonal cycle that repeats with a fixed 12-month period. *(Apply)*
 - **Apply** normalization — z-scores across units, anomalies against a baseline — to compare series and to separate trend from the seasonal cycle. *(Apply)*
 
 > **Where this sits:** after **L16** mapped patterns in *space* · this lesson is patterns in *time* · next, **L18** adds the linear-algebra primer that opens Unit V's quantitative half (correlation, PCA, clustering).
@@ -26,9 +26,9 @@ By the end of this lesson you will be able to:
 
 On September 20, 2017, the rain gauge at San Juan's Luis Munoz Marin airport
 recorded 180.6 mm of rain — and then the thermometer went silent for two
-days. Hurricane Maria is five rows in a table that the station has been
-writing since 1960: one row per day, 23,742 rows, longer than anyone in the
-classroom has been alive.
+days. Hurricane Maria takes up a handful of rows in a table that the
+station has been writing since 1960: one row per day, 23,742 rows, longer
+than anyone in the classroom has been alive.
 
 A table like that answers almost nothing by inspection. Is San Juan getting
 hotter? Is there a rainy season? Was Maria the worst day? Each of those
@@ -86,11 +86,15 @@ observed = pd.Series(25 + trend + season + noise, index=months)
 **Reading the output:** the top panel is what a real dataset hands you;
 the three panels below are what it is *made of*. Real data never comes
 with its components labeled — the rest of this lesson is the toolkit for
-recovering each one. Two vocabulary notes: when a cycle's length is fixed
-by the calendar we call it **seasonality**; the length itself — here 12
-months — is the cycle's **period**, and a repeating cycle is **periodic**.
-Below we will see San Juan's 12-month period directly, by stacking the
-years on top of each other.
+recovering each one. Two vocabulary notes: a pattern that repeats with a
+fixed length is **periodic**, and that length — here 12 months — is its
+**period**. In time-series analysis, a periodic component is called
+**seasonality**, whether the period is a year, a week, or a day. Rises
+and falls *without* a fixed length, such as business cycles, are called
+**cycles**, and they are not seasonality. (The everyday phrase *the
+seasonal cycle* still names the seasonal wave; it is *cycle* as a
+technical term that means no fixed length.) Below we will see San Juan's
+12-month period directly, by stacking the years on top of each other.
 
 ## The Scale You Choose Decides What You See
 
@@ -99,14 +103,18 @@ The first tool is almost embarrassingly simple: change the resolution.
 months, months into years — and aggregates each bin to one value:
 
 ```python
-temp_m = weather["TMID"].resample("ME").mean()   # monthly mean temperature
+temp_m = weather["TMID"].resample("ME").mean()   # monthly MEAN temp
 rain_m = weather["PRCP"].resample("ME").sum()    # monthly TOTAL rainfall
+rain_x = weather["PRCP"].resample("YE").max()    # wettest DAY, yearly
 ```
 
 The aggregation is a decision, not a default. Temperature is a *level*, so
 a month is summarized by its **mean**; rainfall *accumulates*, so a month
 is its **sum** — average the daily rain instead and a hurricane month full
-of dry days looks unremarkable. Now watch one thermometer at three scales:
+of dry days looks unremarkable. And when the question is about extremes,
+neither will do: the **max** keeps the single worst day of each bin.
+September 2017's daily rain averages 13.4 mm; its max is Maria's 180.6 mm.
+Now watch one thermometer at three scales:
 
 ![Three stacked line charts of the same San Juan temperature record. The daily panel is a dense solid ribbon of 23,742 points. The monthly-means panel resolves into a clean wave repeating every year. The annual-means panel, drawn in red, shows a slowly climbing line from about 26 degrees to over 28 degrees Celsius.](assets/l17_three_scales.png)
 
@@ -118,11 +126,13 @@ the question.
 
 ::: {.callout-important title="Coarsening is lossy"}
 Resampling buys clarity by throwing information away — and it does not
-warn you about what it discarded. At the annual scale, Hurricane Maria
-does not exist: 2017's rain total is unremarkable. If the question is
-about events, stay at (or return to) the fine scale; report which scale
-and which aggregation you chose, because a reader cannot reconstruct
-either from the plot.
+warn you about what it discarded. At the annual scale, Hurricane Maria no
+longer exists as an event: 2017 shows up only as a wet year, the 6th
+wettest of 65, and a total cannot say whether one storm or a rainy year
+made it. The wettest year of all, 2010, never had a day above 89.4 mm. If
+the question is about events, stay at (or return to) the fine scale, or
+aggregate with the max; report which scale and which aggregation you
+chose, because a reader cannot reconstruct either from the plot.
 :::
 
 ## Finding the Trend
@@ -167,10 +177,10 @@ San Juan's normal year swings just **3.2 C** between January (25.2 C) and
 August (28.4 C) — the tropics have seasons, only quieter — while rain has
 a sharper shape: a dry March, a November peak near 170 mm.
 
-The climatology *assumed* the cycle was 12 months long, because we grouped
-by month. You can also *see* the period without assuming it: overlay each
+The climatology *assumed* the period was 12 months, because we grouped by
+month. You can also *see* the period without assuming it: overlay each
 year's twelve monthly values on one January-to-December axis, and the 65
-curves pile onto the same hump — a cycle that repeats every 12 months,
+curves pile onto the same hump — a pattern that repeats every 12 months,
 its **period** read straight off the picture. Putting a single number on
 that self-similarity (the series' correlation with a time-shifted copy of
 itself, the **autocorrelation**) needs the correlation coefficient, which
@@ -217,10 +227,62 @@ simplest smoothing that achieves clarity — and keep the raw series in
 reach.
 :::
 
+## Keeping the Extremes
+
+Coarsening and smoothing are built to make extremes disappear. When the
+extremes *are* the question, change the summary instead of the scale.
+Three moves cover most cases.
+
+**Keep the worst day of each bin.** `resample("YE").max()` returns each
+year's wettest day. Climate scientists call this index *Rx1day*; the
+general name is *block maxima*. Rank the 65 annual maxima and the top
+five are the five wettest days of the whole record, Maria among them: the
+max survives exactly the coarsening that blurred the sum.
+
+**Count the days over a threshold.** A comparison like `s >= threshold`
+is `True` on each extreme day, and summing it per bin counts them, so
+"how often are there extremes?" becomes a time series of its own. Choose
+the threshold for a reason. Here it is the station's own 95th percentile
+of daily highs, 33.3 C (92 F):
+
+```python
+tmax = weather["TMAX"]
+hot = tmax >= tmax.quantile(0.95)          # True on each hot day
+decade = weather.index.year // 10 * 10     # 1960, 1970, ...
+# years of data per decade (2020-24 has only 5)
+years = hot.groupby(decade).size() / 365.25
+hot_per_year = hot.groupby(decade).sum() / years
+```
+
+| Decade | 1960s | 1970s | 1980s | 1990s | 2000s | 2010s | 2020-24 |
+|---|---|---|---|---|---|---|---|
+| Hot days per year | 6.4 | 16.0 | 41.2 | 20.6 | 17.9 | 25.3 | 42.4 |
+
+**Reading the output:** the first and last columns fit the warming story,
+but the middle does not. Hot days spike in the 1980s, fall by half for
+two decades, and only then return, and the last column is only five
+years, mostly 2023 and 2024 (62 and 77 hot days). Extremes are much noisier than
+averages: a count like this swings by a factor of two between neighboring
+decades, so it needs a long record, or many stations, before it supports
+a claim. One airport's thermometer is exactly the caveat in the FAQ below.
+
+**Flag what the smoother left behind.** Subtract the smoothed series (or
+the climatology) from the raw one, and the events are what remains: large
+residuals, flagged by their z-score. A **rolling median** is the better
+smoother for this, because one spike barely moves a median (L08's robust
+statistics). Finding unusual points systematically is the subject of
+**L21**.
+
+How rare *was* Maria's rain — a once-in-20-years day, or once in 200?
+Answering that is **extreme value theory**: return periods, the "100-year
+flood". It is a later course's tool; the three moves above are how you
+find the days worth asking about.
+
 ## When to Use Which
 
 - **Raw daily resolution** — when events and extremes are the story: the
   180.6 mm day, the record high. Patterns drown in it; events live in it.
+  At coarser scales, keep events with a max or a threshold count.
 - **Monthly scale + climatology** — for seasonal questions: when is the
   rainy season, how big is the swing.
 - **Annual scale, rolling means, anomalies** — for trend questions: is it
@@ -236,9 +298,9 @@ reach.
   Climate normals use 30 years for a reason; quote the span your claim
   rests on.
 - **Wrong aggregation for the variable.** Means for levels (temperature),
-  sums for amounts (rain). `resample("ME").mean()` on rainfall makes
-  hurricane months look ordinary.
-- **Claiming seasonality from under two cycles.** One year of data shows
+  sums for amounts (rain), maxes for extremes. `resample("ME").mean()` on
+  rainfall makes hurricane months look ordinary.
+- **Claiming seasonality from under two full periods.** One year of data shows
   one winter — you cannot tell the wave from a one-off. Two full periods
   is the floor; more is better.
 - **Comparing raw series across units.** The bigger numbers own the axis
@@ -277,6 +339,8 @@ mildest smoothing that makes the pattern visible.
 | Make timestamps the index | `pd.read_csv(..., parse_dates=["DATE"]).set_index("DATE")` |
 | Slice by date | `s.loc["2017-09"]` · `s.loc["2015":"2024"]` |
 | Coarsen the scale | `s.resample("ME").mean()` (levels) · `.sum()` (amounts) |
+| Keep each bin's extreme | `s.resample("YE").max()` |
+| Count extreme days | `(s>=t).resample("YE").sum()` |
 | Fill gaps, time-aware | `s.interpolate(method="time")` |
 | Trend (cancel the seasons) | `s.rolling(12, center=True).mean()` |
 | The normal year | `s.groupby(s.index.month).mean()` |
