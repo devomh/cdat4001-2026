@@ -87,8 +87,9 @@ rating vectors $a$ and $b$ — the very operation from L18:
 
 $$\cos(a, b) = \frac{a \cdot b}{\lVert a \rVert \, \lVert b \rVert}$$
 
-One refinement matters. Before comparing, we **mean-center** each user (subtract their average), so a
-generous 5-everything rater and a stingy 3-everything rater can still look similar — they agree on
+One refinement matters. Before comparing, we **mean-center** each user (subtract their average;
+it is L18's shift of origin, which moves the arrows out of the all-positive corner), so a
+generous rater (mostly 4s and 5s) and a stingy one (mostly 2s and 3s) can still look similar — they agree on
 *shape*, not absolute level. Mean-centering and then taking the cosine is exactly the **Pearson
 correlation** $r$ you built in L19: collaborative filtering is correlation between rating vectors.
 

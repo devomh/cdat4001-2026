@@ -3,9 +3,9 @@ title: "Linear Algebra for Data Science"
 unit: "Foundations"
 lesson: "18"
 type: concept
-tags: [linear-algebra, numpy, vectors, matrices, dot-product, matrix-multiplication]
+tags: [linear-algebra, numpy, vectors, matrices, dot-product, cosine-similarity, geometry, matrix-multiplication]
 difficulty: introductory
-duration: "50 mins"
+duration: "60 mins"
 ---
 
 ## Learning Objectives
@@ -14,6 +14,7 @@ By the end of this lesson you will be able to:
 
 - **Represent** tabular data as vectors and matrices, and **read** an array's shape (rows by columns). *(Understand)*
 - **Compute** a dot product — by hand and with `@` — and **interpret** it as a weighted sum and as a similarity score (including cosine). *(Apply)*
+- **Interpret** the dot product and cosine geometrically — as an angle between arrows, a shadow, and direction without length — and **explain** why cosines of all-positive ratings are never negative and what mean-centering changes. *(Understand / Analyze)*
 - **Apply** a matrix-vector product to score every item for one user, and a matrix-matrix product to score all users against all items at once. *(Apply)*
 - **Predict** the shape of a product from the inner-dimension rule, and **use** transpose, the identity matrix, and projection onto a direction. *(Apply / Analyze)*
 
@@ -32,6 +33,10 @@ is a **dot product**. "Score every movie for one user" is a **matrix times a
 vector**. "Predict every user's rating of every movie" is a **matrix times a
 matrix**. None of this requires the linear-algebra course you may not have
 taken — just the handful of operations below, all one line each in NumPy.
+
+Each operation also has a **picture**. A user is an arrow; "how alike" is
+the angle between two arrows; a dot product is the shadow one arrow casts on
+another. Once you can see the picture, the formulas stop being arbitrary.
 
 This is a foundations primer: small, operational, no proofs. We drill the
 operations on a movie-ratings world tiny enough to check by hand, so that
@@ -89,14 +94,136 @@ course:
   produce a big dot product. `Ana @ Beto = 49` (both love action) beats
   `Ana @ Carla = 27` (tastes diverge).
 
-Raw dot products are inflated by magnitude — someone who rates everything
-5 looks "similar" to everyone. **Cosine similarity** removes magnitude by
-dividing by the vectors' lengths, leaving only the angle between them:
+Why should "multiply and add" measure similarity at all? The answer is
+geometric, and it is worth a picture.
+
+## The Geometry: Arrows, Angles, and Shadows
+
+A vector with two numbers is a point on a plane — or, better, an **arrow**
+from the origin to that point. Describe each user by two *taste* numbers:
+how much they like action, and how much they like romance. Ana's taste is
+`[1.0, 0.2]` (all action), Carla's is `[0.2, 1.0]` (all romance). Drawn as
+arrows, they point in clearly different directions:
+
+![Two panels in a plane with an action axis and a romance axis. Left: a red arrow for Ana's taste, 1.0 action and 0.2 romance, points almost along the action axis; a blue arrow for Carla's taste, 0.2 action and 1.0 romance, points almost straight up. An arc between them is labeled theta = 67.4 degrees; the title says both arrows have length 1.02 and the cosine of the angle is 0.385. Right: the same two arrows, with a dashed line dropped at a right angle from the tip of Carla's arrow onto Ana's direction. The segment from the origin to where it lands is drawn in green and labeled "shadow of b on a: 0.392"; the title reads a dot b = shadow times length of a = 0.392 times 1.020 = 0.40.](assets/l18_angle_shadow.png)
+
+The dot product has an equivalent **geometric** formula. For two arrows of
+lengths $\lVert a \rVert$ and $\lVert b \rVert$ with angle $\theta$ between
+them:
+
+$$a \cdot b = \lVert a \rVert \, \lVert b \rVert \cos\theta$$
+
+where the **length** (or **norm**) of a vector is
+$\lVert a \rVert = \sqrt{a \cdot a}$ — Pythagoras, in any number of
+dimensions. Check it on the picture: the "multiply and add" recipe gives
+$1.0 \times 0.2 + 0.2 \times 1.0 = 0.40$, and the geometric formula gives
+$1.02 \times 1.02 \times \cos 67.4^\circ = 0.40$ — the same number, read two
+ways.
+
+**Reading the right panel:** drop a line from the tip of `b` straight down
+onto `a`'s direction. The green segment is `b`'s **shadow** on `a` — how far
+`b` reaches *in `a`'s direction*. The dot product is that shadow times the
+length of `a`. So a big dot product means "the two arrows reach the same
+way," which is exactly why it scores similarity.
+
+The shadow also explains the **sign** of a dot product:
+
+![Three panels, each with a black arrow a pointing right and a blue arrow b of the same length. Left, titled same direction: b is 40 degrees above a, its shadow falls on a's side in green, and a dot b = +0.77, positive. Middle, titled perpendicular: b points straight up at 90 degrees, it casts no shadow, and a dot b = 0. Right, titled opposite: b is at 140 degrees, its shadow falls behind the origin in purple, and a dot b = -0.77, negative.](assets/l18_dot_sign.png)
+
+- **Same general direction** (angle under 90 degrees): the shadow points
+  along `a`, and the dot product is **positive**.
+- **Perpendicular** (exactly 90 degrees): no shadow at all, and the dot
+  product is **zero**. Such vectors are called **orthogonal** — for tastes,
+  "unrelated": neither leans toward the other, nor against it.
+- **Opposite** (angle over 90 degrees): the shadow points backward, and the
+  dot product is **negative**.
+
+**Try it.** Turn and stretch `b` and watch the dot product follow its shadow.
+Arrow `a` is fixed at Ana's taste `[1.0, 0.2]`.
+
+```{ojs}
+//| echo: false
+viewof dotAngle = Inputs.range([0, 180], {value: 67, step: 1, label: "angle between a and b (degrees)"})
+viewof dotLength = Inputs.range([0.25, 1.5], {value: 1, step: 0.05, label: "length of b"})
+```
+
+```{ojs}
+//| echo: false
+dotExplorer = {
+  const W = 340, s = 120, cx = 170, cy = 190;
+  const X = (x) => cx + s * x, Y = (y) => cy - s * y;
+  const a = [1.0, 0.2];
+  const na = Math.hypot(a[0], a[1]);
+  const ta = Math.atan2(a[1], a[0]);
+  const t = ta + dotAngle * Math.PI / 180;
+  const b = [dotLength * Math.cos(t), dotLength * Math.sin(t)];
+  const dot = a[0] * b[0] + a[1] * b[1];
+  const shadow = dot / na;
+  const u = [a[0] / na, a[1] / na];
+  const foot = [shadow * u[0], shadow * u[1]];
+  const isZero = dotAngle === 90;
+  const col = isZero ? "gray" : (dot > 0 ? "seagreen" : "darkorchid");
+  // ticks every 0.5 (with faint grid lines) so coordinates can be read off the picture
+  const xTicks = [-1, -0.5, 0.5, 1], yTicks = [-0.5, 0.5, 1, 1.5];
+  const grid = [
+    ...xTicks.map((v) => htl.svg`<line x1="${X(v)}" y1="0" x2="${X(v)}" y2="${W - 40}" stroke="#eee" stroke-width="1"></line>`),
+    ...yTicks.map((v) => htl.svg`<line x1="0" y1="${Y(v)}" x2="${W}" y2="${Y(v)}" stroke="#eee" stroke-width="1"></line>`)
+  ];
+  // tick marks sit on the axes; their labels sit on the bottom and left edges,
+  // where the arrows and the shadow cannot cover them
+  const ticks = [
+    ...xTicks.map((v) => htl.svg`<line x1="${X(v)}" y1="${cy - 4}" x2="${X(v)}" y2="${cy + 4}" stroke="#888" stroke-width="1"></line>
+      <text x="${X(v)}" y="${W - 46}" text-anchor="middle" font-size="11" fill="#666">${v}</text>`),
+    ...yTicks.map((v) => htl.svg`<line x1="${cx - 4}" y1="${Y(v)}" x2="${cx + 4}" y2="${Y(v)}" stroke="#888" stroke-width="1"></line>
+      <text x="3" y="${Y(v) + 4}" text-anchor="start" font-size="11" fill="#666">${v}</text>`)
+  ];
+  const r = 0.28;
+  const arc = `M ${X(r * Math.cos(ta))} ${Y(r * Math.sin(ta))} A ${s * r} ${s * r} 0 0 0 ${X(r * Math.cos(t))} ${Y(r * Math.sin(t))}`;
+  const pic = htl.svg`<svg width="${W}" height="${W - 40}" viewBox="0 0 ${W} ${W - 40}" style="max-width: 100%; height: auto; font-family: sans-serif;">
+    <defs>
+      <marker id="l18-head-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="crimson"></path></marker>
+      <marker id="l18-head-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="steelblue"></path></marker>
+    </defs>
+    ${grid}
+    <line x1="0" y1="${cy}" x2="${W}" y2="${cy}" stroke="#bbb" stroke-width="1"></line>
+    <line x1="${cx}" y1="0" x2="${cx}" y2="${W - 40}" stroke="#bbb" stroke-width="1"></line>
+    ${ticks}
+    <line x1="${X(-1.4 * u[0])}" y1="${Y(-1.4 * u[1])}" x2="${X(1.4 * u[0])}" y2="${Y(1.4 * u[1])}" stroke="crimson" stroke-width="1" stroke-dasharray="2 4"></line>
+    <line x1="${X(0)}" y1="${Y(0)}" x2="${X(foot[0])}" y2="${Y(foot[1])}" stroke="${col}" stroke-width="9" stroke-opacity="0.75"></line>
+    <line x1="${X(b[0])}" y1="${Y(b[1])}" x2="${X(foot[0])}" y2="${Y(foot[1])}" stroke="gray" stroke-width="1.2" stroke-dasharray="5 4"></line>
+    <path d="${arc}" fill="none" stroke="black" stroke-width="1.2"></path>
+    <line x1="${X(0)}" y1="${Y(0)}" x2="${X(a[0])}" y2="${Y(a[1])}" stroke="crimson" stroke-width="3" marker-end="url(#l18-head-a)"></line>
+    <line x1="${X(0)}" y1="${Y(0)}" x2="${X(b[0])}" y2="${Y(b[1])}" stroke="steelblue" stroke-width="3" marker-end="url(#l18-head-b)"></line>
+    <text x="${X(a[0]) + 6}" y="${Y(a[1]) + 18}" fill="crimson" font-weight="bold" font-size="15">a</text>
+    <text x="${X(b[0]) + 6}" y="${Y(b[1]) - 6}" fill="steelblue" font-weight="bold" font-size="15">b</text>
+  </svg>`;
+  const kind = isZero ? "zero: orthogonal" : (dot > 0 ? "positive" : "negative");
+  const fmt = (x) => (isZero && Math.abs(x) < 1e-9 ? 0 : x).toFixed(3);
+  const lab = "padding-right: 1.5em;";
+  const table = htl.html`<table style="font-family: monospace; font-size: 0.95rem; margin-top: 0.5rem;">
+    <tr><td style="${lab}">|a|</td><td style="text-align: right;">${na.toFixed(3)}</td></tr>
+    <tr><td style="${lab}">|b|</td><td style="text-align: right;">${dotLength.toFixed(3)}</td></tr>
+    <tr><td style="${lab}">cos(angle)</td><td style="text-align: right;">${fmt(Math.cos(dotAngle * Math.PI / 180))}</td></tr>
+    <tr><td style="${lab}">shadow of b on a</td><td style="text-align: right;">${fmt(shadow)}</td></tr>
+    <tr><td style="${lab}"><b>a &middot; b</b></td><td style="text-align: right;"><b>${fmt(dot)}</b></td></tr>
+    <tr><td colspan="2" style="color: ${col};">${kind}</td></tr>
+  </table>`;
+  return htl.html`<div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center;">${pic}${table}</div>`;
+}
+```
+
+**Reading the widget:** at 90 degrees the shadow vanishes and `a · b` hits
+zero; past 90 it turns purple and negative. Stretching `b` changes the dot
+product but **not** the angle or its cosine — which is the cue for the next
+section.
+
+## Cosine Similarity: Direction, Not Length
+
+Raw dot products are inflated by length — someone who rates everything 5
+looks "similar" to everyone. To measure only *direction*, solve the
+geometric formula for the angle. That is **cosine similarity**:
 
 $$\cos(a, b) = \frac{a \cdot b}{\lVert a \rVert \, \lVert b \rVert}$$
-
-where $\lVert a \rVert = \sqrt{a \cdot a}$ is the vector's length (its
-**norm**).
 
 ```python
 def cosine(a, b):
@@ -104,12 +231,176 @@ def cosine(a, b):
 
 cosine(ana, beto)    # 0.961  -- two action fans: nearly the same direction
 cosine(ana, carla)   # 0.519  -- action vs romance: pulling apart
+
+np.degrees(np.arccos(cosine(ana, beto)))    # 16.1  -- degrees apart
+np.degrees(np.arccos(cosine(ana, carla)))   # 58.7
 ```
 
-A clean **0.96 vs 0.52**: the dot product, normalized, answers "how alike
-are two users?" — the engine of the recommenders in Unit VI. (It is also
-one short step from **L19's** correlation, which is the cosine of two
-*mean-centered* vectors.)
+![Two panels in the action-romance plane. Left: Ana's red taste arrow, a longer faint red arrow labeled 2 x Ana pointing the same way, and Carla's blue arrow. The title reports Ana dot Carla = 0.40 but 2 x Ana dot Carla = 0.80, while the cosine is 0.385 for both, the same angle. Right: a unit circle with all four users' arrows shrunk to length 1: Ana and Beto almost on top of each other near the action axis, Carla and Dani almost on top of each other near the romance axis. The title says dividing each vector by its length puts every user on the unit circle, and the cosine is the dot product of those arrows.](assets/l18_direction_length.png)
+
+**Reading the figure:** doubling Ana's arrow doubles the dot product
+(0.40 to 0.80) but leaves the angle, and so the cosine (0.385), unchanged.
+Dividing by the two lengths is the same as first shrinking every arrow to
+length 1 — onto the **unit circle** on the right — and then taking an
+ordinary dot product. Cosine keeps the *direction* of taste and throws away
+its *intensity*.
+
+The ratings rows have **five** numbers, so you cannot draw them on paper —
+but the angle is still real. Any two arrows, in any number of dimensions,
+lie together in one flat plane through the origin, and within that plane
+they make an ordinary angle. That is why `cosine(ana, beto)` can say
+"16.1 degrees apart" about five-number vectors. A clean **0.96 vs 0.52**:
+the normalized dot product answers "how alike are two users?" — the engine
+of the recommenders in Unit VI.
+
+## The Positive Corner, and Shifting the Origin
+
+Look again at that 0.52. Ana and Carla have *opposite* tastes, yet their
+cosine is comfortably positive. The picture says why:
+
+![Five arrows in a plane whose axes are the Action1 rating and the Romance1 rating. The positive quarter of the plane is shaded. Ana (5, 1) and Beto (4, 2) point to the lower right in red, Carla (1, 5) and Dani (2, 4) to the upper left in blue, and Eva (5, 5) in orange runs along a dashed diagonal line labeled "rates both the same". The angle between Ana and Carla is marked 67.4 degrees. A note below the corner says every arrow lives in this corner, so no two are more than 90 degrees apart.](assets/l18_positive_corner.png)
+
+(The figure keeps just two movies, Action1 and Romance1, so you can see it;
+on those two Ana and Carla are 67.4 degrees apart, on all five 58.7.)
+Ratings are positive numbers, so every user's arrow lives in the **positive
+corner** of the space. Two arrows in that corner can never be more than 90
+degrees apart, so their cosine can never go negative — even for opposite
+tastes. It gets worse at the **diagonal**. Meet **Eva**, who rates every
+movie 5: her arrow runs right down the middle of the corner, close to
+everyone.
+
+```python
+eva = np.array([5, 5, 5, 5, 5])
+R @ eva                           # array([70, 70, 70, 75])
+[cosine(r, eva) for r in R]       # 0.868, 0.885, 0.868, 0.905
+```
+
+Eva's raw dot product with every user (70 to 75) beats Ana and Beto's 49 —
+by that measure she is everyone's soulmate. Cosine tames her, but only
+partly: she still scores 0.87 to 0.91 with everyone, because she sits on the
+diagonal and the diagonal is near every arrow in the corner. What we
+actually care about is not "rates movies highly" but "rates movies
+*differently from their own average*" — what each user is *for* and
+*against*.
+
+The fix is to **shift the origin**. Subtract each user's own average rating
+from their row — **mean-centering**. Now an above-average rating is
+positive, a below-average one is negative, and the arrows can leave the
+corner:
+
+```python
+# Subtract each user's own average. keepdims=True keeps the 4 averages
+# as a column, so row i loses its own average.
+R_c = R - R.mean(axis=1, keepdims=True)
+
+R_c[0]                   # array([ 2.2,  1.2, -1.8, -1.8,  0.2])  -- Ana
+cosine(R_c[0], R_c[2])   # -0.953  -- Ana vs Carla: now nearly opposite
+cosine(R_c[0], R_c[1])   #  0.834  -- Ana vs Beto: still alike
+```
+
+**Reading the output:** Ana and Carla jump from **+0.519 to -0.953** — the
+numbers finally say what the tastes say, opposite. Ana and Beto drop a little
+(0.961 to 0.834) because their shared habit of rating above the middle no
+longer counts as agreement. And Eva? Every one of her ratings equals her
+average, so centering turns her into the **zero vector**, an arrow of length
+zero, and her cosine is undefined (0 divided by 0). That is the honest
+answer: a user who rates everything the same tells you nothing about taste.
+
+Geometrically, centering does one thing: it **projects every arrow onto the
+directions perpendicular to the diagonal**, where "rates everything higher"
+no longer exists. With three movies those directions form a flat plane, so
+you can rotate it yourself, with the three movies as the three axes:
+
+::: {.panel-tabset}
+
+## Rotate it (interactive)
+
+```{ojs}
+//| echo: false
+Plotly = require("https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js")
+viewof cornerMode = Inputs.radio(["raw ratings", "mean-centered"], {value: "raw ratings", label: "Show"})
+viewof cornerPlane = Inputs.toggle({label: "shade the plane through Ana and Carla", value: false})
+```
+
+```{ojs}
+//| echo: false
+cornerPlot = {
+  const names = ["Ana", "Beto", "Carla", "Dani", "Eva"];
+  const colors = ["crimson", "crimson", "steelblue", "steelblue", "darkorange"];
+  // Action1, Action2, Romance1 ratings (columns 0, 1, 2 of R) plus Eva
+  const raw = [[5, 4, 1], [4, 5, 2], [1, 1, 5], [2, 1, 4], [5, 5, 5]];
+  const centered = cornerMode === "mean-centered";
+  const vecs = raw.map((v) => {
+    const m = (v[0] + v[1] + v[2]) / 3;
+    return centered ? v.map((x) => x - m) : v;
+  });
+  const dot = (p, q) => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+  const cosAC = dot(vecs[0], vecs[2]) / Math.sqrt(dot(vecs[0], vecs[0]) * dot(vecs[2], vecs[2]));
+  const traces = vecs.map((v, i) => ({
+    type: "scatter3d", mode: "lines+markers+text", name: names[i],
+    x: [0, v[0]], y: [0, v[1]], z: [0, v[2]],
+    text: ["", (centered && i === 4) ? "Eva = 0" : names[i]], textposition: "top center",
+    textfont: {color: colors[i], size: 14},
+    line: {color: colors[i], width: 7}, marker: {color: colors[i], size: [0, 5]},
+    hoverinfo: "text", hovertext: ["origin", names[i] + " (" + v.map((x) => x.toFixed(2)).join(", ") + ")"]
+  }));
+  const lim = centered ? 3 : 5.5;
+  const lo = centered ? -3 : 0;
+  // the diagonal: "rates all three movies the same"
+  traces.push({type: "scatter3d", mode: "lines", x: [lo, lim], y: [lo, lim], z: [lo, lim],
+               line: {color: "gray", width: 3, dash: "dash"}, hoverinfo: "text", hovertext: "the diagonal"});
+  if (centered) {
+    // the plane x + y + z = 0, perpendicular to the diagonal
+    const e1 = [1 / Math.SQRT2, -1 / Math.SQRT2, 0];
+    const e2 = [1 / Math.sqrt(6), 1 / Math.sqrt(6), -2 / Math.sqrt(6)];
+    const c = [[3, 3], [-3, 3], [-3, -3], [3, -3]].map(([p, q]) => e1.map((x, k) => p * x + q * e2[k]));
+    traces.push({type: "mesh3d", x: c.map((p) => p[0]), y: c.map((p) => p[1]), z: c.map((p) => p[2]),
+                 i: [0, 0], j: [1, 2], k: [2, 3], color: "gray", opacity: 0.15, hoverinfo: "skip"});
+  }
+  if (cornerPlane) {
+    const a = vecs[0], b = vecs[2];
+    const p = [[0, 0, 0], a, a.map((x, k) => x + b[k]), b];
+    traces.push({type: "mesh3d", x: p.map((q) => q[0]), y: p.map((q) => q[1]), z: p.map((q) => q[2]),
+                 i: [0, 0], j: [1, 2], k: [2, 3], color: "goldenrod", opacity: 0.35, hoverinfo: "skip"});
+  }
+  const axis = (title) => ({title: {text: title}, range: [lo, lim]});
+  const layout = {
+    height: 480, margin: {l: 0, r: 0, t: 10, b: 0}, showlegend: false,
+    scene: {xaxis: axis("Action1"), yaxis: axis("Action2"), zaxis: axis("Romance1"), aspectmode: "cube",
+            // centered: look almost straight down the diagonal, so the plane faces the reader
+            camera: {eye: centered ? {x: 1.5, y: 1.1, z: 1.3} : {x: 1.6, y: -1.6, z: 0.9}}}
+  };
+  const div = htl.html`<div style="width: 100%; max-width: 640px;"></div>`;
+  const note = htl.html`<p style="font-family: monospace;">cos(Ana, Carla) in these three movies = ${cosAC.toFixed(3)}
+    (${(Math.acos(cosAC) * 180 / Math.PI).toFixed(1)} degrees apart)</p>`;
+  const wrap = htl.html`<div>${div}${note}</div>`;
+  yield wrap;
+  await Plotly.newPlot(div, traces, layout, {displaylogo: false, responsive: true});
+}
+```
+
+Drag to rotate; scroll to zoom. Switch between raw and centered, and turn on
+the plane through Ana and Carla.
+
+## Static view
+
+![Two 3-D plots with axes Action1, Action2 and Romance1. Left, raw ratings: five arrows from the origin all crowd into the positive corner around a dashed diagonal; Eva in orange lies right on the diagonal; the title gives cos(Ana, Carla) = +0.416. Right, mean-centered: the arrows now lie on one flat gray plane through the origin, the red action fans Ana and Beto point one way, the blue romance fans Carla and Dani point the opposite way, and Eva has collapsed to a dot at the origin labeled Eva = 0; the title gives cos(Ana, Carla) = -0.971.](assets/l18_centering_3d.png)
+
+:::
+
+**Reading the 3-D view:** raw, all five arrows huddle around the diagonal,
+and the Ana-Carla cosine is +0.416 in these three movies. Centered, the
+arrows drop onto the plane perpendicular to the diagonal, Eva collapses to
+the origin, and the Ana-Carla cosine swings to -0.971: the action fans and the romance fans now
+point in opposite directions. With the shaded plane on, you can see the
+point made earlier — two arrows always share one flat plane, whatever the
+number of dimensions.
+
+This centered cosine has a famous name: it is the **correlation** between
+the two users' ratings. **L19** builds it properly — centering *columns*
+(variables) instead of rows (users), same geometry — and the
+collaborative-filtering recommenders of **L22** compare users exactly this
+way.
 
 ## Matrix times Vector
 
@@ -143,6 +434,13 @@ the result has length `5`. Mismatched inner dimensions are the single most
 common linear-algebra error — and NumPy raises a `ValueError` rather than
 guessing.
 :::
+
+**The same picture again.** Draw each movie as a point in the
+action-romance plane and the user's taste `w` as a direction. Each score is
+the movie's shadow on that direction (times the length of `w`), so ranking
+the movies for a user means **lining up their shadows on the user's taste
+direction**. Turn the taste direction and the ranking turns with it — the
+lab lets you do exactly that with a slider.
 
 ## Matrix times Matrix
 
@@ -178,9 +476,9 @@ Three small tools round out the kit:
 - **Transpose** (`A.T`) flips rows and columns: `(5, 2)` becomes `(2, 5)`.
   Use it to make inner dimensions line up (as we did to build `V` from `F`).
 - **Identity matrix** (`np.eye(n)`) is the "do-nothing" matrix — 1s on the
-  diagonal, 0s elsewhere. `A @ I == A`, the matrix version of multiplying by
-  1. It is the reference point for "undoing" a matrix (the matrix inverse,
-  which this course does not cover).
+  diagonal, 0s elsewhere. `A @ I == A`, the matrix version of multiplying
+  by 1. It is the reference point for "undoing" a matrix (the matrix
+  inverse, which this course does not cover).
 - **Shapes** are the contract. Read them before every `@`: if the inner
   dimensions match, the product exists and you already know its shape.
 
@@ -193,11 +491,12 @@ F @ np.eye(2)        # == F  (the identity changes nothing)
 
 ## Projection: a Peek at PCA
 
-One more move, because the whole of **L20** rests on it. Projecting a point
-onto a direction is just a dot product: take a **unit** direction vector `d`
-(length 1) and compute `point @ d` — the result is *where the point falls
-along that axis*, a single number that summarizes a multi-dimensional point
-by one coordinate.
+You have already seen projection: it is the **shadow** from the geometry
+section. Take a **unit** direction vector `d` (length 1). Then `point @ d`
+is the length of the point's shadow on that direction — *where the point
+falls along that axis*, a single number that summarizes a multi-dimensional
+point by one coordinate. With length 1 there is nothing to rescale: the dot
+product *is* the shadow.
 
 Project each user's 2-D taste vector onto the "action-versus-romance" axis
 `d = [1, -1]/sqrt(2)`:
@@ -229,9 +528,15 @@ projection onto a cleverly chosen `d`.
   `@` — NumPy infers whether it should act as a row or a column. (Explicit
   2-D column vectors `(n, 1)` are stricter about shape, but you will not need
   them here.)
-- **Unnormalized similarity.** A raw dot product rewards big magnitudes;
-  for "how alike" use cosine (or mean-center first, which is L19's road to
-  correlation).
+- **Unnormalized similarity.** A raw dot product rewards long arrows; for
+  "how alike" use cosine, which keeps only the direction.
+- **All-positive data never looks opposite.** Ratings, counts, and prices
+  live in the positive corner, so their cosines stay at or above 0 even for
+  opposite tastes. If "opposite" should show up as negative, mean-center
+  first.
+- **The zero vector has no direction.** A row that is all zeros (or all one
+  value, after centering) gives 0 divided by 0, and NumPy returns `nan` with
+  a warning. Check for it before ranking by cosine.
 
 ## FAQ / Industry Reality
 
@@ -240,6 +545,12 @@ this course. Those are the deeper layer (and the reason a full linear-algebra
 course exists); PCA's *derivation* uses eigenvectors, but you will *run* PCA
 with one scikit-learn call in L20. This primer is deliberately the operational
 subset: the operations you will actually type.
+
+**"Is an angle between 5-number vectors real, or just a metaphor?"** — Real.
+Any two vectors span one flat plane through the origin, and inside that
+plane they make an ordinary angle; cosine measures it. The same is true for
+the 1,682-movie rating vectors of L22. You only
+lose the ability to *draw* all the vectors at once.
 
 **"Is `@` just `*` for arrays?"** — No, and confusing them is the most common
 NumPy mistake. `*` is elementwise (shapes unchanged); `@` is the dot/matrix
@@ -258,7 +569,10 @@ times faster than nested Python loops, and it reads as the math it is.
 | Grab a row (vector) / a column | `A[i]` · `A[:, j]` |
 | Dot product of two vectors | `a @ b` (or `np.dot(a, b)`) |
 | Vector length (norm) | `np.linalg.norm(a)` |
+| Unit vector (same direction, length 1) | `a / np.linalg.norm(a)` |
 | Cosine similarity | `a @ b / (norm(a) * norm(b))` |
+| Angle in degrees | `np.degrees(np.arccos(cos))` |
+| Mean-center each row | `R - R.mean(axis=1, keepdims=True)` |
 | Score all items for one user | `F @ w` (matrix x vector) |
 | Score all users x all items | `U @ V` (matrix x matrix) |
 | Transpose / identity | `A.T` · `np.eye(n)` |
@@ -266,6 +580,6 @@ times faster than nested Python loops, and it reads as the math it is.
 
 ## Where to Go Deeper
 
-- **The intuition, visually:** [3Blue1Brown — Essence of Linear Algebra](https://www.3blue1brown.com/topics/linear-algebra) — short videos on vectors, the dot product, and matrices as transformations; the geometry behind everything above.
+- **The intuition, visually:** [3Blue1Brown — Essence of Linear Algebra](https://www.3blue1brown.com/topics/linear-algebra) — short videos on vectors, the dot product, and matrices as transformations; its dot-product chapter is the shadow picture above, animated.
 - **Official docs:** [NumPy — Linear algebra (`numpy.linalg`)](https://numpy.org/doc/stable/reference/routines.linalg.html) — `norm`, `@`/`matmul`, and the solvers you will meet later.
 - **One rung up:** any "linear algebra for machine learning" reference — the same operations, plus the eigen-decomposition that powers PCA (L20) under the hood.

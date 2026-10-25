@@ -24,9 +24,11 @@ By the end of this lesson you will be able to:
 
 ## Why This Matters
 
-In L18 you learned that the dot product measures how *aligned* two vectors are, and that cosine
-turns it into a magnitude-free score from -1 to +1. **Correlation is that exact idea applied to two
-columns of data** — once you center them on their means. This lesson builds the number from L18's
+In L18 you learned that the dot product measures how *aligned* two vectors are, that cosine turns
+it into a magnitude-free score from -1 to +1, and that **mean-centering** — shifting the origin to
+each vector's own average — is what lets opposite tastes come out negative (Ana and Carla went from
++0.52 to -0.95). **Correlation is that exact idea applied to two columns of data**: center each
+column on its mean, then take the cosine. This lesson builds the number from L18's
 machinery, then spends the rest of its time on the four ways the number can fool you. Here is the
 warning, built by the statistician Francis Anscombe in 1973 — four datasets with the same mean of x
 (9.0), same mean of y (7.5), same variances, and the same correlation r = 0.82:
@@ -55,7 +57,8 @@ alone cannot.
 ## Measuring It: from L18's Dot Product to r
 
 How do we put a number on "they move together"? Start with **covariance**: subtract each column's mean
-(center it), then take the **dot product** of the two centered columns and divide by `n - 1`. When x and
+(center it — L18's shift of origin, applied to a column instead of a user's row), then take the
+**dot product** of the two centered columns and divide by `n - 1`. When x and
 y are both above their means on the same rows, those products are positive, so covariance is positive.
 That dot product is precisely L18's operation:
 
