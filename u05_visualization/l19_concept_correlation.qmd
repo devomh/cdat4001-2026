@@ -5,14 +5,14 @@ lesson: "19"
 type: concept
 tags: [correlation, pearson, spearman, covariance, simpsons-paradox, prediction]
 difficulty: introductory
-duration: "50 mins"
+duration: "55 mins"
 ---
 
 ## Learning Objectives
 
 By the end of this lesson you will be able to:
 
-- **Compute and interpret** Pearson's r, and **connect** it to L18 — r is the cosine of the two mean-centered columns, and covariance is their dot product. *(Apply / Understand)*
+- **Compute and interpret** Pearson's r, and **connect** it to L18 — r is the cosine of the two mean-centered columns, covariance is their dot product, and centering is what lets r go negative — and **read** r as the angle between those columns. *(Apply / Understand)*
 - **Recognize** r's three blind spots (linear-only, outlier-sensitive, blind to groups) and **choose** Spearman when it is the honest measure. *(Analyze)*
 - **Use** correlation as a predictive tool — fit a best-fit line and read r-squared as the fraction of variance it explains. *(Apply)*
 - **Critique** a correlation claim — causation, confounders, and Simpson's paradox. *(Evaluate)*
@@ -99,6 +99,145 @@ relationship:
 These bands are *conventions, not laws* — in physics r = 0.7 may be weak; in social science it may be a
 career.
 
+### Why Center First? The Positive Corner Again
+
+L18 showed that all-positive vectors live in the **positive corner**, so their cosine can never go
+negative: Ana and Carla scored +0.52 although their tastes are opposite. Penguin measurements are all
+positive too — no bill is -3 mm deep — so skip the centering and every pair of columns looks
+aligned:
+
+| Pair of columns | Cosine of the raw columns | r (cosine after centering) |
+|---|---|---|
+| flipper length vs body mass | +0.991 | +0.871 |
+| bill depth vs body mass | +0.966 | **-0.472** |
+
+All six pairs of the four measurements give a raw cosine between 0.966 and 0.996: the raw arrows
+all point roughly along the diagonal, the "every measurement is big" direction, and the cosine
+reports that, not the relationship. Centering subtracts each column's mean, so what remains is
+*above or below this column's average*. Now bill depth and body mass come out **negative**, a
+sign the raw cosine could never show (the Simpson's-paradox section below explains where that
+negative comes from).
+The rule is L18's, applied to columns: **center first, then compare directions.**
+
+### Reading r as an Angle
+
+Because r is a cosine, every r is also an **angle** between the two centered columns:
+`np.degrees(np.arccos(r))`. Two arrows always share one flat plane, whatever the number of rows,
+so the angle is as real as the one between Ana and Carla.
+
+| r | Angle between the centered columns | Read |
+|---|---|---|
+| +1 | 0 degrees | same direction: a perfect rising line |
+| +0.87 | 29.4 degrees | flipper length vs body mass |
+| +0.5 | 60 degrees | moderate — **not** 45: the angle is not proportional to r |
+| 0 | 90 degrees | perpendicular: no linear alignment |
+| -0.47 | 118.2 degrees | bill depth vs body mass |
+| -1 | 180 degrees | opposite: a perfect falling line |
+
+Under 90 degrees, r is positive; at exactly 90 it is zero; over 90 it is negative. **Try it:** turn
+the angle and watch the cloud of points that has exactly that r.
+
+::: {.panel-tabset}
+
+## Turn the angle (interactive)
+
+```{ojs}
+//| echo: false
+viewof corrAngle = Inputs.range([0, 180], {value: 30, step: 1, label: "angle between the centered columns (degrees)"})
+```
+
+```{ojs}
+//| echo: false
+angleDial = {
+  // Two fixed seeded columns (from _tools/figures/cdat4001_l19_correlation.py --js).
+  // Center both, remove z's shadow on x, scale to unit length: x and z are now
+  // perpendicular unit arrows, and y = cos(angle) x + sin(angle) z has r = cos(angle).
+  const baseX = [-0.37, 0.99, 0.42, -0.62, 0.67, -1.45, 0.59, -0.56, 0.63, 0.44, -0.77, 0.53, 0.34, -0.65, 2.00, 0.80, -1.18, -0.99, 0.32, 0.31, -0.73, 1.22, 0.10, -0.86, -0.37, -0.18, -1.55, -0.83, -1.81, -0.29, 0.61, -1.29, 0.32, -1.18, -0.16, -0.52, -1.21, -0.55, -1.23, 0.29, 0.05, 1.20, -1.46, 1.09, -0.08, 0.41, -0.19, 1.55, 1.39, 1.07];
+  const baseZ = [0.26, -2.34, 0.56, -0.03, -0.13, 0.43, 1.19, 0.27, -0.47, -0.78, 0.37, 1.10, 0.55, 0.46, -0.45, -1.24, 0.95, 0.61, -1.83, -0.72, 1.00, 1.07, -0.64, 2.25, 1.40, 0.96, -0.13, -1.39, 0.81, 1.78, 0.91, -1.08, 1.14, -0.66, -2.20, 0.32, -2.71, 0.11, 1.01, 1.04, 2.72, 0.67, -0.98, 0.62, 0.68, -0.58, -1.75, -0.37, -0.69, -0.40];
+  const n = baseX.length;
+  const mean = (v) => v.reduce((s, a) => s + a, 0) / v.length;
+  const dot = (u, v) => u.reduce((s, a, i) => s + a * v[i], 0);
+  const mx = mean(baseX), mz = mean(baseZ);
+  let x = baseX.map((a) => a - mx);
+  let z = baseZ.map((a) => a - mz);
+  const k = dot(z, x) / dot(x, x);
+  z = z.map((a, i) => a - k * x[i]);
+  const nx = Math.sqrt(dot(x, x)), nz = Math.sqrt(dot(z, z));
+  const sc = Math.sqrt(n - 1);
+  x = x.map((a) => a / nx * sc);
+  z = z.map((a) => a / nz * sc);
+  const t = corrAngle * Math.PI / 180;
+  const c = Math.cos(t), s = Math.sin(t);
+  const y = x.map((a, i) => c * a + s * z[i]);
+  const my = mean(y);
+  const yc = y.map((a) => a - my);
+  const rCloud = dot(x, yc) / (Math.sqrt(dot(x, x)) * Math.sqrt(dot(yc, yc)));
+  const isZero = corrAngle === 90;
+  const col = isZero ? "gray" : (c > 0 ? "seagreen" : "darkorchid");
+  const fmt = (v) => (isZero ? "0.000" : (v >= 0 ? "+" : "") + v.toFixed(3));
+
+  // left: the two centered columns as unit arrows in their shared plane
+  const W1 = 220, H1 = 150, s1 = 80, cx1 = 110, cy1 = 110;
+  const X1 = (v) => cx1 + s1 * v, Y1 = (v) => cy1 - s1 * v;
+  const ra = 0.3;
+  const arc = `M ${X1(ra)} ${Y1(0)} A ${s1 * ra} ${s1 * ra} 0 0 0 ${X1(ra * c)} ${Y1(ra * s)}`;
+  const arrows = htl.svg`<svg width="${W1}" height="${H1}" viewBox="0 0 ${W1} ${H1}" style="max-width: 100%; height: auto; font-family: sans-serif;">
+    <defs>
+      <marker id="l19-head-x" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="crimson"></path></marker>
+      <marker id="l19-head-y" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="steelblue"></path></marker>
+    </defs>
+    <line x1="0" y1="${cy1}" x2="${W1}" y2="${cy1}" stroke="#ccc" stroke-width="1"></line>
+    <line x1="${cx1}" y1="0" x2="${cx1}" y2="${H1}" stroke="#ccc" stroke-width="1"></line>
+    <path d="${arc}" fill="none" stroke="black" stroke-width="1.2"></path>
+    <line x1="${X1(0)}" y1="${Y1(0)}" x2="${X1(1)}" y2="${Y1(0)}" stroke="crimson" stroke-width="3" marker-end="url(#l19-head-x)"></line>
+    <line x1="${X1(0)}" y1="${Y1(0)}" x2="${X1(c)}" y2="${Y1(s)}" stroke="steelblue" stroke-width="3" marker-end="url(#l19-head-y)"></line>
+    <text x="${X1(1)}" y="${Y1(0) + 18}" text-anchor="end" fill="crimson" font-size="12">x centered</text>
+    <text x="${Math.max(36, Math.min(X1(c * 1.05), W1 - 36))}" y="${Y1(s * 1.05) - (Math.abs(s) < 0.2 ? 14 : 6)}" text-anchor="middle" fill="steelblue" font-size="12">y centered</text>
+  </svg>`;
+
+  // right: the cloud whose r is exactly cos(angle)
+  const W2 = 240, s2 = 36, c2 = 120;
+  const X2 = (v) => c2 + s2 * v, Y2 = (v) => c2 - s2 * v;
+  const dots = x.map((a, i) => htl.svg`<circle cx="${X2(a)}" cy="${Y2(y[i])}" r="3.2" fill="#555" fill-opacity="0.8"></circle>`);
+  const cloud = htl.svg`<svg width="${W2}" height="${W2}" viewBox="0 0 ${W2} ${W2}" style="max-width: 100%; height: auto; font-family: sans-serif;">
+    <rect x="0.5" y="0.5" width="${W2 - 1}" height="${W2 - 1}" fill="none" stroke="#bbb"></rect>
+    <line x1="0" y1="${c2}" x2="${W2}" y2="${c2}" stroke="#ddd" stroke-width="1"></line>
+    <line x1="${c2}" y1="0" x2="${c2}" y2="${W2}" stroke="#ddd" stroke-width="1"></line>
+    ${dots}
+    <text x="${W2 - 6}" y="${c2 - 6}" text-anchor="end" font-size="11" fill="#666">x</text>
+    <text x="${c2 + 6}" y="14" font-size="11" fill="#666">y</text>
+  </svg>`;
+
+  const kind = isZero ? "zero: no linear alignment" : (c > 0 ? "positive: y tends to rise with x" : "negative: y tends to fall as x rises");
+  const lab = "padding-right: 1.5em;";
+  const table = htl.html`<table style="font-family: monospace; font-size: 0.95rem;">
+    <tr><td style="${lab}">angle</td><td style="text-align: right;">${corrAngle} deg</td></tr>
+    <tr><td style="${lab}">cos(angle)</td><td style="text-align: right;">${fmt(c)}</td></tr>
+    <tr><td style="${lab}"><b>r of this cloud</b></td><td style="text-align: right;"><b>${fmt(rCloud)}</b></td></tr>
+    <tr><td colspan="2" style="color: ${col};">${kind}</td></tr>
+  </table>`;
+  return htl.html`<div style="display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: center;">${arrows}${cloud}${table}</div>`;
+}
+```
+
+## Static view
+
+![Two rows of four panels. Top row: a red arrow labeled x centered points right, and a blue arrow labeled y centered leaves the origin at 30, 60, 90 and 120 degrees, with the angle marked by an arc. Bottom row: a cloud of 50 points under each pair of arrows, titled r = cos(30) = +0.87, r = cos(60) = +0.50, r = cos(90) = 0.00 and r = cos(120) = -0.50. The first cloud is a tight rising band, the second a looser rising cloud, the third a round blob with no tilt, and the fourth a loose falling cloud.](assets/l19_angle_clouds.png)
+
+:::
+
+**Reading the dial:** the two panels show the same data two ways. On the left are L18's
+arrows: each centered column is one arrow, with one coordinate per data point. On the right is
+the usual scatter: one dot per data point. The angle lives *between the arrows*, not between the
+cloud and the x-axis — on standardized axes a rising cloud always leans along the diagonal, and
+what the angle changes is how *thin* the cloud is. A small angle squeezes the cloud into a tight
+rising band. Toward 90 degrees
+it loosens into a round blob with no tilt, and past 90 it tilts downward, tightening again as the
+angle nears 180. r does not move evenly with the angle: the first 30 degrees cost r only 0.13
+(from 1 to 0.87), while the 30 degrees from 60 to 90 cost it 0.5. So a cloud with r = 0.5 is already
+60 degrees away from a perfect line, two-thirds of the way to no alignment at all — it looks loose
+because, measured as an angle, it is.
+
 ## r's Three Blind Spots
 
 The bands assume you already looked at the scatter, because r is blind in three ways:
@@ -181,6 +320,15 @@ species — being a Gentoo independently makes a penguin heavier AND shallower-b
 clouds tilts the line the wrong way. The lab walks you through producing and unmasking it.
 :::
 
+![Scatter plot of bill depth (mm) against body mass (g) for 342 penguins, colored by species. The Gentoo points (green) sit upper-left: shallow bills of about 13 to 17 mm and masses of 4,000 to 6,300 g. The Adelie (blue) and Chinstrap (orange) points overlap lower-right: bills of about 16 to 21.5 mm and masses of 2,700 to 4,800 g. Each species has its own solid fitted line, and all three rise: Adelie r = +0.58 and +217 g per mm, Chinstrap r = +0.60 and +205 g per mm, Gentoo r = +0.72 and +369 g per mm. A dashed black line fitted to all three species pooled falls from upper-left to lower-right: r = -0.47 and -192 g per mm.](assets/l19_simpson.png)
+
+**Reading the figure:** inside each species the line rises — a deeper bill goes with a heavier bird,
+by about 200 to 370 g per extra millimetre. But the Gentoo cloud sits up and to the left (shallow
+bills, heavy birds) and the other two sit down and to the right, so a single line through all three
+clouds has to run downhill: -192 g per mm. In angle terms, the centered columns are 118 degrees apart
+for the pooled data but only 44 to 55 degrees apart inside each species. Same measurements, opposite
+story — the pooled line is describing the gap *between* species, not anatomy *within* one.
+
 The practical rule: **never report a pooled correlation without checking the obvious groupings first**
 (`groupby` + per-group r, or a hue-colored scatter).
 
@@ -189,17 +337,31 @@ The practical rule: **never report a pooled correlation without checking the obv
 This one number turns up across the course:
 
 - **Filter feature selection (L13).** L13's filters scored each feature against the label and kept the
-  top-ranked ones; `|r|` is another such filter score — a numeric-pair sibling of L13's chi-square and
-  mutual-information filters, usable when both the feature and the label are numbers.
+  top-ranked ones, and L13's filter table left the numeric-label case waiting for this lesson. `|r|`
+  fills it — here is its row, in the same format:
+
+  | Filter | Columns it fits | Watch out |
+  |---|---|---|
+  | **Correlation \|r\|** -- needs a numeric label | Numeric features (measurements, counts, 0/1 flags) | Scores only the **linear** part: a curved link can score near 0. One outlier can make or break it, so look at the top features' scatters. Two features with a high \|r\| *with each other* are redundant: keep one. |
+
 - **L17's autocorrelation.** Periodicity in a time series is just r computed between the series and a
-  *lagged copy of itself*: a strong r at lag 12 means "this month resembles the same month last year". L17
-  showed the 12-month cycle visually and explicitly promised the number here — this is it.
+  *lagged copy of itself*: a strong r at lag 12 means "this month resembles the same month last year".
+  L17 showed the 12-month cycle visually and promised the number here; the lab's Exercise 4 computes it
+  for the San Juan temperatures.
+- **L22's collaborative filtering.** L18 centered each *user's row* and called the centered cosine a
+  correlation. L22's recommenders compare users exactly that way: r between two users' rating rows,
+  with the same geometry as r between two columns here.
 
 Correlation is one of the most reused numbers in data science precisely because it is so simple: a cosine
 of two centered vectors.
 
 ## Common Pitfalls
 
+- **Skipping the centering.** A cosine of raw, all-positive columns is near 1 for almost any pair (about
+  0.97 to 0.996 for the penguins) — it measures "both are positive numbers", not a relationship. Correlation is the
+  cosine *after* centering.
+- **Reading the angle as proportional to r.** r = 0.5 is 60 degrees, not 45; r = 0.87 is still 29
+  degrees. A moderate r is further from a perfect line than its size suggests.
 - **The causal leap.** "r = 0.87, so flippers cause mass" — nothing in the number supports the verb. Say
   "associated", then argue causation separately.
 - **Correlating aggregates.** Correlations on group *averages* (per-island means, per-year totals) are
@@ -229,10 +391,12 @@ modeling that redundancy causes trouble; the professional reflex to a 0.97 cell 
 | Question | Plot | Number |
 |----------|------|--------|
 | Do two numeric variables move together? | scatter plot (L09) | Pearson's r = `x.corr(y)` |
+| How far from a perfect line, as an angle? | the angle dial above | `np.degrees(np.arccos(r))`: under 90 positive, 90 none, over 90 negative |
 | ...monotone but curved? ordinal? outliers? | scatter plot | **Spearman** `method="spearman"` |
 | Which pairs matter, among many? | heatmap (diverging cmap) | `df.corr()` matrix |
 | How well does x predict y? | scatter + best-fit line | `np.polyfit(x, y, 1)`; r-squared |
-| Is the pooled correlation honest? | scatter with `hue=` group | per-group r vs overall r |
+| Is the pooled correlation honest? | scatter with `hue=` group + per-group lines | per-group r vs overall r |
+| Does a series repeat itself? | the series over time (L17) | `s.autocorr(lag=k)` = r with a copy shifted k steps |
 
 ## Where to Go Deeper
 
