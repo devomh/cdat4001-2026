@@ -5,32 +5,37 @@ lesson: "20"
 type: lab
 tags: [pca, dimensionality-reduction, parallel-coordinates, scaling, projection]
 difficulty: intermediate
-duration: "60 mins"
+duration: "75 mins"
 ---
 
 **Goal:** take a table of penguins measured four ways and collapse it into a
 single 2D picture that shows the three species -- without ever telling the
 algorithm what a species is. Along the way: the pairwise-plot ceiling,
-parallel coordinates, why you must standardize, and how PCA's projection is
-L18's `X @ W`. Pairs with the concept note
-[Many Variables & Dimensionality Reduction (PCA)](l20_concept_pca.qmd).
+parallel coordinates, PCA on a toy town you can see in 3-D (stores along an
+avenue), why you must standardize (and when you must not), and how PCA's
+projection is L18's shadow, taken after centering. Pairs with the concept
+note [Many Variables & Dimensionality Reduction (PCA)](l20_concept_pca.qmd).
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u05_visualization/l20_lab_penguins_pca.ipynb)
 
 > This page is the read-only view. To run the lab, open the notebook
 > (`l20_lab_penguins_pca.ipynb`) -- in Colab via the badge above, or locally.
 > Every text output below comes from actually running the cells.
+> The rotatable 3-D plot and the slider appear only when you run the
+> notebook.
 
 ## Prerequisites & Setup
 
 **Palmer Penguins** -- body measurements of 344 penguins from three species
 (Adelie, Gentoo, Chinstrap) on three islands of the Palmer Archipelago,
-Antarctica (Gorman et al. 2014; CC0 public domain). There is no randomness
-in this lab -- PCA is deterministic -- so no seed is needed.
+Antarctica (Gorman et al. 2014; CC0 public domain). PCA itself is
+deterministic; the only randomness is the toy town of Step 3, which is
+generated with a fixed seed (42). We use Plotly for the 3-D view you can
+rotate and ipywidgets for one slider.
 
 ```python
 # Setup cell 1 of 2: install only (Colab resets on open; run this first)
-%pip install -q pandas numpy matplotlib seaborn scikit-learn
+%pip install -q pandas numpy matplotlib seaborn scikit-learn plotly ipywidgets
 ```
 
 ```python
@@ -41,6 +46,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.graph_objects as go
+from ipywidgets import interact
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
@@ -183,10 +190,235 @@ are close on size but Adelie has a much shorter bill -- the two differences
 that PCA will line up onto two axes.)*
 </details>
 
-## Step 3: Standardize First (Worked)
+## Step 3: PCA You Can See -- Stores Along an Avenue (Worked)
 
-Before PCA, look at what raw scales would do. The four features live on
-wildly different number ranges:
+Four dimensions cannot be pictured, so before the penguins, try PCA on a
+toy town in 3-D where you can check its answer by eye. A main avenue runs
+600 m at 30 degrees north of east; three side streets cross it; every store
+sits on some floor. Each store is a point (east, north, height), all in
+meters:
+
+```python
+# A toy town: stores along a main avenue (seeded, so always the same)
+rng = np.random.default_rng(42)
+avenue_angle = np.radians(30)   # the avenue: 30 degrees north of east
+
+# along = distance down the avenue; across = distance off it.
+# 40 stores on the avenue (either sidewalk, 10 m off its center line),
+# then 3 side streets crossing at 150, 300, 450 m, 14 stores each.
+along = np.r_[rng.uniform(0, 600, 40), np.repeat([150, 300, 450], 14)]
+offsets = np.r_[np.arange(-140, 0, 20), np.arange(20, 160, 20)]
+across = np.r_[rng.choice([-10, 10], 40), np.tile(offsets, 3)]
+floor = rng.integers(0, 16, size=len(along))   # ground (0) to 15
+
+# rotate (along, across) onto the map; 4 m per floor
+east = along * np.cos(avenue_angle) - across * np.sin(avenue_angle)
+north = along * np.sin(avenue_angle) + across * np.cos(avenue_angle)
+stores = pd.DataFrame({"east_m": east.round(1),
+                       "north_m": north.round(1),
+                       "height_m": 4.0 * floor})
+print("Stores:", stores.shape)
+print(stores.describe().loc[["mean", "std", "min", "max"]].round(1))
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+Stores: (82, 3)
+      east_m  north_m  height_m
+mean   268.1    155.3      29.7
+std    133.5     93.6      17.9
+min     17.8    -46.2       0.0
+max    501.9    346.2      60.0
+~~~
+</details>
+
+> **Read it:** 82 stores spread about 480 m east-west and 390 m north-south,
+> but only 0 to 60 m up. The spread (std) is biggest east (133.5 m), then
+> north (93.6 m), then height (17.9 m) -- yet the avenue runs diagonally, so
+> neither the east column nor the north column is the town's main direction.
+> Guess before you run the next cells: which direction holds the most spread?
+
+Fit PCA on the three coordinates and draw its three directions from the
+centroid (the average store). Drag to rotate, scroll to zoom: the axes are
+at honest 1:1:1 scale, so the floors are a thin layer until you zoom in.
+
+```python
+S = stores.to_numpy()        # (82, 3): east, north, height in meters
+pca_s = PCA().fit(S)         # same units everywhere: no standardizing
+center = pca_s.mean_         # the centroid: the average store
+
+fig = go.Figure(go.Scatter3d(
+    x=S[:, 0], y=S[:, 1], z=S[:, 2], mode="markers",
+    marker=dict(size=3, color=S[:, 2], colorscale="Viridis")))
+# every arrow is 150 m long: the components are unit directions
+for i, color in enumerate(["crimson", "darkorange", "purple"]):
+    tip = center + 150 * pca_s.components_[i]
+    fig.add_trace(go.Scatter3d(
+        x=[center[0], tip[0]], y=[center[1], tip[1]],
+        z=[center[2], tip[2]], mode="lines+text",
+        text=["", f"PC{i + 1}"], line=dict(color=color, width=8)))
+fig.update_layout(height=500, showlegend=False,
+                  scene=dict(aspectmode="data",
+                             xaxis_title="east (m)",
+                             yaxis_title="north (m)",
+                             zaxis_title="height (m)"))
+fig.show()
+```
+
+Now read PCA's answer in numbers -- the share of spread per direction, the
+loadings, and each direction's heading on the map:
+
+```python
+print("Explained variance ratio:",
+      pca_s.explained_variance_ratio_.round(3))
+loadings_s = pd.DataFrame(pca_s.components_.round(3),
+                          index=["PC1", "PC2", "PC3"],
+                          columns=stores.columns)
+print(loadings_s)
+for i in [0, 1]:
+    c = pca_s.components_[i]
+    # angle of the (east, north) part on the map; % 180 because
+    # d and -d are the same line
+    deg = np.degrees(np.arctan2(c[1], c[0])) % 180
+    print(f"PC{i + 1} heading on the map: {deg:.1f} degrees")
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+Explained variance ratio: [0.832 0.156 0.012]
+     east_m  north_m  height_m
+PC1   0.865    0.501     0.004
+PC2  -0.501    0.865    -0.035
+PC3  -0.021    0.028     0.999
+PC1 heading on the map: 30.1 degrees
+PC2 heading on the map: 120.1 degrees
+~~~
+</details>
+
+> **Read it:** PC1 points along the **avenue**: 0.865 east + 0.501 north is a
+> heading of 30.1 degrees, and we built the avenue at 30 without telling PCA.
+> PC2 (120.1 degrees, perpendicular) runs along the **side streets**, and PC3
+> (0.999 on height) points **up**. Their shares are 83.2%, 15.6% and 1.2%.
+> Drop PC3 and you keep 98.8% -- what you lose is the floors, leaving the
+> street map. Keep only PC1 (83.2%) and each store becomes one number, its
+> position along the avenue, almost a street address. Note that PC1 is
+> neither the east column nor the north column: it is a *blend* of both
+> that means one physical thing.
+
+The arrows start at the centroid, not at (0, 0, 0). That is the first thing
+PCA does: it **centers** each column, the same positive-corner fix as L18
+and L19. Then each score is a **shadow** on a unit direction (L18's
+`point @ d`):
+
+```python
+W_s = pca_s.components_.T      # one unit direction per column
+scores_s = pca_s.transform(S)
+print("transform == (S - mean) @ W:",
+      np.allclose(scores_s, (S - center) @ W_s))
+print("transform == S @ W (no centering):",
+      np.allclose(scores_s, S @ W_s))
+print("Length of each direction:", np.linalg.norm(W_s, axis=0).round(3))
+print("W.T @ W is the identity:", np.allclose(W_s.T @ W_s, np.eye(3)))
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+transform == (S - mean) @ W: True
+transform == S @ W (no centering): False
+Length of each direction: [1. 1. 1.]
+W.T @ W is the identity: True
+~~~
+</details>
+
+> **Read it:** PCA's scores are shadows on the components **after** subtracting
+> the mean (True); without centering they are not (False). The raw
+> coordinates sit far from (0, 0, 0) -- L18's positive corner again -- so an
+> uncentered shadow would measure distance from a corner of the map, not
+> from the middle of town. Each direction has length 1, and `W.T @ W` being
+> the identity says every pair has dot product 0: the components are
+> perpendicular unit vectors, L18's orthogonal directions.
+
+**Why "most variance" finds the avenue.** Spin a unit direction on the map,
+cast every store's shadow on it, and watch how spread out the shadows are.
+Run the cell and drag the slider:
+
+```python
+centered_map = S[:, :2] - center[:2]     # east, north, centered
+
+
+def spin(heading=0):
+    t = np.radians(heading)
+    d = np.array([np.cos(t), np.sin(t)])     # unit direction
+    shadows = centered_map @ d
+    # each shadow as a point on the line, to draw it
+    feet = np.column_stack([shadows * d[0], shadows * d[1]])
+    fig, ax = plt.subplots(figsize=(6, 4.5))
+    ax.scatter(centered_map[:, 0], centered_map[:, 1], s=10,
+               color="gray")
+    ax.scatter(feet[:, 0], feet[:, 1], s=10, color="crimson")
+    ax.plot([-350 * d[0], 350 * d[0]], [-350 * d[1], 350 * d[1]],
+            color="crimson")
+    ax.set_aspect("equal")
+    ax.set_title(f"heading {heading} deg: shadow variance "
+                 f"{shadows.var():,.0f} m^2")
+    plt.show()
+
+
+# interact() builds a slider from (min, max, step).
+# The ; stops Jupyter from also printing interact's return value.
+interact(spin, heading=(0, 179, 1));
+```
+
+No slider (or reading this page)? The same spin as a loop over every
+heading from 0 to 179 degrees:
+
+```python
+headings = np.arange(0, 180)
+spread = []
+for h in headings:
+    t = np.radians(h)
+    d = np.array([np.cos(t), np.sin(t)])
+    spread.append((centered_map @ d).var())
+spread = np.array(spread)
+best = int(headings[spread.argmax()])
+least = int(headings[spread.argmin()])
+print(f"Most spread:  heading {best} degrees, "
+      f"variance {spread.max():,.0f} m^2")
+print(f"Least spread: heading {least} degrees, "
+      f"variance {spread.min():,.0f} m^2")
+
+plt.figure(figsize=(7, 3.5))
+plt.plot(headings, spread)
+plt.axvline(best, color="crimson", linestyle="--")
+plt.xlabel("heading (degrees north of east)")
+plt.ylabel("shadow variance (m^2)")
+plt.title("Spin the direction: the peak is PC1")
+plt.tight_layout()
+plt.show()
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+Most spread:  heading 30 degrees, variance 22,108 m^2
+Least spread: heading 120 degrees, variance 4,145 m^2
+~~~
+</details>
+
+> **Read it:** the shadows spread most at **30 degrees** -- PC1's heading, the
+> avenue -- and least at 120 degrees, PC2, the side streets. That is all
+> "the direction of maximum variance" means. PCA finds the peak without
+> trying every angle, and it does so in any number of dimensions, where you
+> could never spin a slider.
+
+## Step 4: Standardize First (Worked)
+
+The stores were safe to use raw because every coordinate was in meters. The
+penguins are not: before PCA, look at what raw scales would do. The four
+features live on wildly different number ranges:
 
 ```python
 print("Raw feature spread (std):")
@@ -225,18 +457,20 @@ After StandardScaler, every feature has std ~1.0: [1. 1. 1. 1.]
 </details>
 
 > **Read it:** body mass varies by ~800 (grams), bill depth by ~2 (mm). PCA
-> chases variance, and 800 dwarfs 2, so the unscaled PC1 is **100% body mass**
-> (loading 1.000) and the bill measurements vanish -- PCA has just renamed the
+> chases variance, and 800 dwarfs 2, so the unscaled PC1 is **essentially 100%
+> body mass** (loading 1.000; the printed 100.0% is 99.99% rounded) and the
+> bill measurements vanish -- PCA has just renamed the
 > grams column. `StandardScaler` rescales every feature to mean 0, std 1, so
 > each gets an equal vote. **Standardizing is not optional for PCA.** (The
 > `dtype: float64` line is pandas printing the `.std()` Series footer, not a
 > fifth feature.)
 
-## Step 4: Principal Component Analysis (Worked + Completion)
+## Step 5: Principal Component Analysis (Worked + Completion)
 
 Now fit PCA on the standardized matrix. Each **principal component** is a new
-axis: PC1 points in the direction of greatest variation, PC2 in the
-next-greatest direction perpendicular to it. The `explained_variance_ratio_`
+axis, just like the stores' arrows: PC1 points in the direction of greatest
+variation, PC2 in the next-greatest direction perpendicular to it. With four
+features you cannot look at the arrows any more; you read them from numbers. The `explained_variance_ratio_`
 says how much of the spread each one captures:
 
 ```python
@@ -272,28 +506,33 @@ PC1 = 68.8%, PC1+PC2 = 88.2%, PC1+PC2+PC3 = 97.3%
 > plot's bars fall off a cliff after PC2 (the "elbow"): that is the visual cue
 > for how many components are worth keeping.
 
-The projection itself is nothing new -- it is **L18's `X @ W`**. Confirm that
-`pca.transform(X)` is exactly the standardized data times the components:
+The projection itself is nothing new. On the stores, the scores were
+`(S - mean) @ W`. The standardized penguins are already centered, so here
+the mean is zero and the scores are plain **L18 `X @ W`**:
 
 ```python
 scores = pca.transform(X)
-manual = X @ pca.components_.T          # L18: project X onto the new axes
-print("scores == X @ components_.T (L18's projection):", np.allclose(scores, manual))
+W = pca.components_.T          # 4 unit directions, one per column
+print("X is already centered (column means 0):",
+      np.allclose(X.mean(axis=0), 0))
+print("scores == X @ W (L18's projection):", np.allclose(scores, X @ W))
 print("scores shape:", scores.shape, "= (penguins, components)")
 ```
 
 <details><summary>Expected Output</summary>
 
 ~~~text
-scores == X @ components_.T (L18's projection): True
+X is already centered (column means 0): True
+scores == X @ W (L18's projection): True
 scores shape: (342, 4) = (penguins, components)
 ~~~
 </details>
 
-> **Read it:** PCA adds nothing to L18's projection mechanics -- the scores
-> are literally `X @ W` with `W = components_.T`. PCA's one extra idea is
-> *choosing* `W` to be the directions of maximum variance, instead of being
-> handed an axis as in L18.
+> **Read it:** every score is the shadow of a (centered) penguin on one unit
+> direction, exactly L18's projection. `StandardScaler` already subtracted
+> the means, which is why no `- mean` is needed here. PCA's one extra idea
+> is *choosing* `W` to be the directions of maximum variance, instead of
+> being handed an axis as in L18.
 
 Your turn -- read the cumulative curve exactly:
 
@@ -317,7 +556,7 @@ Cumulative variance: [0.688 0.882 0.973 1.   ]
 many to keep" is a judgment call -- the elbow says two, a 90% rule says three.)*
 </details>
 
-## Step 5: Reading the Projection (Worked)
+## Step 6: Reading the Projection (Worked)
 
 What do the two axes *mean*? The **loadings** say how each original feature
 contributes:
@@ -346,8 +585,44 @@ body_mass_g        0.548  0.084
 > **bill shape** axis. The components are *blends*, and reading the loadings
 > is how you name them.
 
+Careful with that negative bill-depth loading. L19 found Simpson's paradox
+on exactly these two measurements: bill depth and body mass correlate
+negatively when the species are pooled, positively within every species.
+Run PCA on one species at a time:
+
+```python
+pc1_by_species = {}
+for sp, group in clean.groupby("species"):
+    Xg = StandardScaler().fit_transform(group[features])
+    pc1_by_species[sp] = PCA().fit(Xg).components_[0]
+print("PC1 loadings, one PCA per species:")
+print(pd.DataFrame(pc1_by_species, index=features).round(2))
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+PC1 loadings, one PCA per species:
+                   Adelie  Chinstrap  Gentoo
+bill_length_mm       0.49       0.48    0.49
+bill_depth_mm        0.49       0.52    0.50
+flipper_length_mm    0.44       0.49    0.50
+body_mass_g          0.57       0.51    0.51
+~~~
+</details>
+
+> **Read it:** inside every species, PC1 loads **positively** on all four
+> measurements, bill depth included (0.49 to 0.52): a plain "bigger
+> everywhere" axis, where bigger birds have *deeper* bills. So the pooled
+> PC1's -0.400 on bill depth is a contrast **between** species (Gentoo: big
+> but shallow-billed), not a rule about penguins. A loading describes the
+> data you handed PCA; pool several groups and it describes their
+> differences.
+
 Now the scatter, colored by the species PCA never saw, with the loading arrows
-drawn on (a **biplot**):
+drawn on (a **biplot**). Loadings are at most about 0.8 while the scores
+spread over several units, so the arrows are stretched 3 times to be visible:
+read their directions and relative lengths, not their size.
 
 ```python
 clean["PC1"], clean["PC2"] = scores[:, 0], scores[:, 1]
@@ -358,6 +633,7 @@ for sp, color in palette.items():
     m = clean["species"] == sp
     ax.scatter(clean.loc[m, "PC1"], clean.loc[m, "PC2"], s=18, alpha=0.6,
                color=color, label=sp)
+# loading arrows, stretched x3 (labels at x3.4) so they show up
 for i, f in enumerate(features):
     ax.arrow(0, 0, pca.components_[0, i]*3, pca.components_[1, i]*3,
              color="black", alpha=0.7, head_width=0.08, length_includes_head=True)
@@ -448,22 +724,25 @@ capture so much more here?
 PC1 alone now: 93.6% (vs 68.8% with all four)
 ~~~
 *(Flipper length and body mass are strongly correlated -- L19's +0.87 -- so a
-single "size" axis explains 94% of just those two. The more correlated your
-features, the more PCA can compress; the four-feature case is lower because
-bill shape adds a genuinely separate direction.)*
+single "size" axis explains 94% of just those two. In fact, for any two
+standardized features PC1 lies on a diagonal (45 degrees when r > 0, 135
+when r < 0) and its share is exactly (1 + |r|)/2: here (1 + 0.871)/2 =
+0.936. The more correlated your features,
+the more PCA can compress; the four-feature case is lower because bill shape
+adds a genuinely separate direction.)*
 </details>
 
 ### Exercise 2 -- Find the within-species oddball
 
-The Step 5 outlier was extreme overall. Instead, find the penguin furthest
+The Step 6 outlier was extreme overall. Instead, find the penguin furthest
 from *its own species' centroid* in PC space: group by species, get each
 group's mean PC1/PC2, and compute each penguin's distance to its group mean.
 Report the furthest one and its measurements. One sentence on what makes it
 odd for its species.
 
-> **Hint:** this uses the `PC1`/`PC2` columns you added to `clean` in Step 5.
+> **Hint:** this uses the `PC1`/`PC2` columns you added to `clean` in Step 6.
 > `clean.groupby("species")[["PC1","PC2"]].transform("mean")` gives each row
-> its species centroid; then a distance like Step 5's.
+> its species centroid; then a distance like Step 6's.
 
 ```python
 # TODO: your code here
@@ -485,7 +764,44 @@ just distance from the origin. L21 will automate exactly this kind of
 group-and-outlier finding.)*
 </details>
 
-### Exercise 3 -- Written: when does PCA help?
+### Exercise 3 -- Standardize the stores (and lose the avenue)
+
+Step 4 said: always standardize. Test the exception. Standardize the stores'
+three coordinates with `StandardScaler`, refit PCA, and print the explained
+variance ratio, PC1's loadings, and PC1's heading (as in Step 3). Compare
+with the raw-meter PCA of Step 3. In two sentences: what happened to the
+avenue, and why should coordinates that share a unit *not* be standardized?
+
+> **Hint:** `StandardScaler().fit_transform(S)`, then `PCA().fit(...)`. The
+> heading is `np.degrees(np.arctan2(c[1], c[0])) % 180` for `c` the first
+> component. Recall Exercise 1: what is PC1 for two standardized features?
+
+```python
+# TODO: your code here
+```
+
+<details><summary>Expected Output (one possible answer -- match the values, not the print format)</summary>
+
+~~~text
+Standardized evr: [0.544 0.336 0.12 ]
+Standardized components (rows PC1, PC2, PC3):
+[[ 0.708  0.706  0.025]
+ [ 0.064 -0.1    0.993]
+ [ 0.703 -0.701 -0.116]]
+PC1 heading: 44.9 degrees
+~~~
+*(PC1 swings from the avenue's 30.1 degrees to 44.9 -- almost exactly
+the 45-degree diagonal of Exercise 1. Standardizing divides east and north
+by different spreads (133.5 m and 93.6 m), and once east and north have
+equal spread, PC1 falls on the diagonal no matter where the avenue runs: the
+avenue's direction is lost. Height also gets an equal vote: it jumps from
+1.2% (PC3) to 33.6% and becomes PC2, ahead of the side streets (now PC3,
+12%). When every column is the same quantity in the same unit, the raw
+geometry is the answer, and standardizing distorts it instead of fixing a
+units problem.)*
+</details>
+
+### Exercise 4 -- Written: when does PCA help?
 
 You are handed a 50-column table of the 78 Puerto Rico municipios (income, age
 bands, commute times, housing, dozens more). In 3-4 sentences, argue when PCA
@@ -503,10 +819,12 @@ straight to PCA on this table.
 |------|-------------|------------------|
 | See the ceiling | `sns.pairplot(...)` | Panels grow as k(k-1)/2 -- 30 features = 435 panels |
 | See many axes at once | `parallel_coordinates(...)` | One line per row across all features (standardize first) |
-| Standardize | `StandardScaler().fit_transform(X)` | Without it, PC1 is just the biggest-unit column (body mass) |
+| See PCA's directions | stores in 3-D, `PCA().fit(S)` | PC1 = the avenue, PC2 = side streets, PC3 = up; arrows from the centroid |
+| Max variance, shown | spin a unit direction, `(centered_map @ d).var()` | The shadows spread most along PC1 (30 degrees) |
+| Standardize | `StandardScaler().fit_transform(X)` | Without it, PC1 is just the biggest-unit column (body mass); but never for same-unit coordinates |
 | Reduce dimensions | `PCA().fit(X)`, `explained_variance_ratio_` | PC1+PC2 hold 88% of four features' variation |
-| Project (= L18's X @ W) | `pca.transform(X)` == `X @ components_.T` | PCA is projection onto the max-variance axes |
-| Read the projection | loadings, scatter | PC1 = size, PC2 = bill shape; the 3 species emerge unsupervised |
+| Project (L18's shadows) | `pca.transform(X)` == `(X - mean) @ W` | Center, then shadow on perpendicular unit directions |
+| Read the projection | loadings, scatter | PC1 = size, PC2 = bill shape; the 3 species emerge unsupervised; the negative bill depth is between species |
 | Spot outliers | distance in PC space | One giant Gentoo, extreme on both axes |
 
 Next lesson (L21): instead of reading groups by eye, an algorithm (k-means)
