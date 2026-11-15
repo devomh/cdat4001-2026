@@ -349,8 +349,9 @@ This one number turns up across the course:
   L17 showed the 12-month cycle visually and promised the number here; the lab's Exercise 4 computes it
   for the San Juan temperatures.
 - **L22's collaborative filtering.** L18 centered each *user's row* and called the centered cosine a
-  correlation. L22's recommenders compare users exactly that way: r between two users' rating rows,
-  with the same geometry as r between two columns here.
+  correlation. L22's recommenders compare users that way: on a small table where everyone rated every
+  movie it is exactly r between two users' rating rows, with the same geometry as r between two
+  columns here; on the real, mostly empty ratings matrix L22 uses a practical variant.
 
 Correlation is one of the most reused numbers in data science precisely because it is so simple: a cosine
 of two centered vectors.

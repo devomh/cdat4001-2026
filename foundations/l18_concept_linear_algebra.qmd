@@ -399,8 +399,8 @@ number of dimensions.
 This centered cosine has a famous name: it is the **correlation** between
 the two users' ratings. **L19** builds it properly — centering *columns*
 (variables) instead of rows (users), same geometry — and the
-collaborative-filtering recommenders of **L22** compare users exactly this
-way.
+collaborative-filtering recommenders of **L22** compare users this same way
+(with one adjustment for the many movies a user has not rated).
 
 ## Matrix times Vector
 

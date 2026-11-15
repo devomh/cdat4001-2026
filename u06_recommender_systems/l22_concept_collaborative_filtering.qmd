@@ -5,7 +5,7 @@ lesson: "22"
 type: concept
 tags: [recommender-systems, collaborative-filtering, cosine-similarity, matrix-factorization]
 difficulty: intermediate
-duration: "35 mins"
+duration: "45 mins"
 ---
 
 ## Learning Objectives
@@ -14,8 +14,8 @@ By the end of this lesson you will be able to:
 
 - **Define** what a recommender system does (the user-item-rating framing), **give** notable examples, and **distinguish** explicit from implicit feedback. *(Understand)*
 - **Distinguish** the family of recommender approaches — collaborative, content-based, demographic, knowledge-based, and hybrid — at the overview level. *(Understand)*
-- **Build** user-user and item-item collaborative filtering from scratch with cosine similarity, and **generate** top-N recommendations. *(Apply)*
-- **Explain** matrix factorization as a latent-factor model and **relate** it to L18's matrix product and L20's PCA. *(Understand / Apply)*
+- **Compute** user-user collaborative filtering by hand on a small table, **read** user similarity as the angle between centered taste arrows, and **build** user-user and item-item collaborative filtering from scratch to **generate** top-N recommendations. *(Apply)*
+- **Explain** matrix factorization as a latent-factor model, **relate** it to L18's matrix product and L20's PCA, and **separate** a prediction into its baseline and its latent-factor part. *(Understand / Apply)*
 - **Identify** the cold-start problem as the wall collaborative filtering hits. *(Understand)*
 
 > **Where this sits:** **L21** closed Unit V by letting an algorithm *find* groups in data · this lesson opens **Unit VI**, a case study on recommender systems, and **builds** one from scratch · **L23** adds the other approaches and shows how to *evaluate* recommendations · **L24** is the mini-project.
@@ -83,28 +83,89 @@ demographic, hybrid) and how to choose between them.
 **Collaborative filtering** is the workhorse, and the one you build in the lab. It ignores *what* an
 item is and looks only at the pattern of ratings: find users who rated movies the way you did, then
 recommend what they liked. "Rated the way you did" is measured with **cosine similarity** between two
-rating vectors $a$ and $b$ — the very operation from L18:
+rating vectors $a$ and $b$ — the very operation from L18, the cosine of the angle between two arrows:
 
 $$\cos(a, b) = \frac{a \cdot b}{\lVert a \rVert \, \lVert b \rVert}$$
 
-One refinement matters. Before comparing, we **mean-center** each user (subtract their average;
-it is L18's shift of origin, which moves the arrows out of the all-positive corner), so a
-generous rater (mostly 4s and 5s) and a stingy one (mostly 2s and 3s) can still look similar — they agree on
-*shape*, not absolute level. Mean-centering and then taking the cosine is exactly the **Pearson
-correlation** $r$ you built in L19: collaborative filtering is correlation between rating vectors.
+### A Toy You Can Check by Hand
 
-It comes in two flavors:
+Five users and six movies. Ana has rated four of them; the other four users have rated all six. Ana
+has **not** seen *Speed* or *Aladdin*, and we want to predict both.
+
+| | Terminator | Top Gun | Toy Story | Lion King | Speed | Aladdin |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| **Ana** | 5 | 4 | 1 | 2 | ? | ? |
+| Beto *(generous)* | 5 | 5 | 3 | 3 | 5 | 3 |
+| Cami *(stingy)* | 3 | 3 | 1 | 1 | 3 | 1 |
+| Dani *(opposite taste)* | 1 | 2 | 5 | 4 | 1 | 5 |
+| Eli *(mixed)* | 4 | 3 | 4 | 3 | 3 | 4 |
+
+Ana loves the two action movies and dislikes the two family movies. Beto has the *same* taste on a
+generous scale, Cami the same taste on a stingy scale, Dani the opposite taste, and Eli no clear
+pattern. Compare each of them with Ana on the four movies they share.
+
+**Step 1 — raw cosine.** Beto 0.966, Cami 0.989, Eli 0.876, Dani 0.565. *Everyone* looks like Ana,
+even Dani. This is L18's **positive corner**: ratings are all positive, so the arrows all point into
+the same corner and can never be more than 90 degrees apart.
+
+**Step 2 — mean-center, then cosine.** Subtract each user's own average (Ana 3, Beto 4, Cami 2,
+Dani 3, Eli 3.5) — L18's shift of origin, which moves the arrows out of the positive corner — and
+take the cosine again: Beto **+0.949**, Cami **+0.949**, Eli **0.000**, Dani **-1.000**. Generous
+Beto and stingy Cami become the *same* arrow: they agree with Ana on *shape*, not on level. Dani
+points the opposite way, and Eli is unrelated.
+
+![Two panels of arrows, each user drawn at their angle to Ana's arrow, which points right. Left panel, raw ratings: all four arrows sit inside a narrow fan close to Ana — Cami at 8.5 degrees, Beto at 15.1, Eli at 28.9 and Dani at 55.6, none beyond 90 degrees. Right panel, mean-centered ratings: Beto and Cami share one arrow at 18.4 degrees, Eli points straight up at 90 degrees and Dani points straight left at 180 degrees.](assets/l22_toy_angles.png)
+
+Read the figure as angles, the way L19 read $r$: the raw cosines squeeze everyone into a narrow fan,
+and centering spreads them out to 18.4 degrees (same taste), 90 degrees (unrelated) and 180 degrees
+(opposite). Each arrow is drawn at its angle *to Ana*; the picture does not show the angles between
+two neighbors. On complete vectors like these, mean-centering and then taking the cosine **is** the
+**Pearson correlation** $r$ you built in L19 — the lab checks it with `np.corrcoef` and gets the same
+four numbers.
+
+**Step 3 — predict.** Keep Ana's $k = 2$ most similar users (Beto and Cami) and add their
+similarity-weighted **centered** ratings to Ana's own average:
+
+$$\hat{r}_{\text{Ana},\,m} = \bar{r}_{\text{Ana}} + \frac{\sum_v s_v\,(r_{v,m} - \bar{r}_v)}{\sum_v |s_v|}$$
+
+Both neighbors rated *Speed* one star above their own average and *Aladdin* one star below, so
+
+$$
+\begin{aligned}
+\hat{r}_{\text{Speed}} &= 3 + \frac{0.949(+1) + 0.949(+1)}{0.949 + 0.949} = 4.00 \\
+\hat{r}_{\text{Aladdin}} &= 3 + \frac{0.949(-1) + 0.949(-1)}{0.949 + 0.949} = 2.00
+\end{aligned}
+$$
+
+An action fan should see the action movie. That is all of user-user collaborative filtering.
+
+### The Lab's More Robust Version
+
+Real users are not this tidy: in MovieLens a typical pair of users shares only about 10 of the 1,682
+movies. So the lab follows the same recipe with three changes that make it more robust:
+
+- **It compares over all 1,682 movies, not just the shared ones, counting every unrated movie as 0**
+  (that is, "at the user's own average", which is taken over the movies that user rated). On
+  complete vectors that is exactly $r$; on
+  sparse ones it is a shrunk cousin of $r$, often called *adjusted cosine*. Two users who share only
+  three or four movies get a **small** score instead of a lucky $\pm 1$: on MovieLens, Pearson's $r$
+  on just the shared movies has $|r| > 0.9$ for 18% of such pairs, the lab's version for
+  none.
+- **It uses 30 neighbors**, not 2.
+- **It refuses a movie that fewer than 3 of those neighbors rated** — a *support guard*. Without it,
+  19 of the 20 top-5 picks we checked (four different users) rested on a *single* neighbor who
+  happened to love the movie; one opinion is not a recommendation.
+
+### User-User vs. Item-Item
+
+Collaborative filtering comes in two flavors:
 
 - **User-user** — "users like you also enjoyed...". Find the user's nearest neighbors, then score
-  each unseen movie by the neighbors' similarity-weighted ratings.
+  each unseen movie by the neighbors' similarity-weighted ratings, as above.
 - **Item-item** — "because you liked this movie...". Compute similarity between *movies* (across the
   rating columns); recommend movies close to the ones the user already liked. Item-item is usually
   steadier — a movie's rating pattern changes far more slowly than a person's taste — and it is what
   Amazon's classic "customers who bought..." shipped.
-
-A caution you will see in the lab: a movie rated by only a handful of people can show a *spuriously*
-high similarity to anything by chance. Real systems require a **minimum number of ratings** before
-trusting a similarity — a standard guard against those flukes.
 
 ## The Cold-Start Problem
 
@@ -124,7 +185,7 @@ or *blockbuster vs. arthouse* — explain the ratings. Each user gets a short ve
 they want each factor); each movie gets a short vector $q_i$ (how much it has each factor); and the
 predicted rating is their **dot product**:
 
-$$\hat{R}_{ui} \approx p_u^\top q_i, \qquad R \approx P\,Q^\top$$
+$$R_{ui} \approx p_u^\top q_i, \qquad R \approx P\,Q^\top$$
 
 That second form should look familiar. In **L18** the motivating example for **matrix times matrix**
 was *"a users-by-factors table times a factors-by-movies table gives predicted ratings"* — this is
@@ -135,9 +196,33 @@ read off a PCA.
 
 ![Three small heatmaps side by side. The first, P, is a tall four-users-by-two-factors table (factors labeled action and romance). The second, Q-transpose, is a two-factors-by-five-movies table. The third, their matrix product P times Q-transpose, is a four-users-by-five-movies table of predicted match scores: the action fan scores highest on Die Hard, the romance fan highest on the Notebook (with the rom-com next), and the user who likes both scores highest on a movie that has both factors.](assets/l22_mf_factors.png)
 
-The one difference from PCA: the ratings matrix is mostly empty, so we cannot run plain PCA on it. We
+The main difference from PCA: the ratings matrix is mostly empty, so we cannot run plain PCA on it. We
 **learn** $P$ and $Q$ by gradient descent on the observed ratings only — the lab does this from
-scratch, in about twenty lines.
+scratch, in about twenty lines. The fit is also looser than PCA's: the learned factors need not be
+perpendicular, and a penalty (*regularization*) keeps them small so they do not memorize the few
+ratings each user gave.
+
+**A baseline comes first.** Part of every rating has nothing to do with taste: some people rate
+everything high, and some movies are rated high by almost everyone. So the model the lab trains puts
+three plain numbers in front of the factor match:
+
+$$\hat{r}_{ui} = \underbrace{\mu + b_u + b_i}_{\text{baseline}} + \underbrace{p_u^\top q_i}_{\text{taste match}}$$
+
+so $P\,Q^\top$ is now the taste-match part. Here $\mu$ is the average of all ratings, $b_u$ is how much more generous than average user $u$ is
+(the *user bias*), and $b_i$ is how much better liked than average movie $i$ is (the *item bias*).
+The baseline is the same mean-centering idea as in collaborative filtering, now learned. On MovieLens
+it does most of the work: for user 196's top pick, *Schindler's List*, the prediction is
+
+$$3.530 - 0.017 + 0.984 + 0.178 = 4.675 \approx 4.68$$
+
+so the item bias alone is more than five times the taste match. The factors personalize at the
+margin.
+
+And the factors come **unnamed**. "Action" and "romance" are labels we gave the toy. A learned factor
+is whatever direction best explains the ratings. Reading the movies at its two ends, a few half-match a
+label: one of the lab's 20 runs from *Fantasia*, *Natural Born Killers* and *The Crying Game* to
+*Die Hard*, *True Lies* and *The Empire Strikes Back*, roughly *arthouse vs. blockbuster*. Most are
+mixtures that no single word describes.
 
 ## What's Next: Does It Actually Work?
 
@@ -185,11 +270,15 @@ it maximizes watch time, and quietly encode bias from who rated what. These are 
 - The approach **family**: collaborative (this lesson), content-based, demographic, knowledge-based,
   hybrid (L23) — each leans on different information.
 - **Collaborative filtering** turns the crowd into personalization via **cosine similarity** on
-  mean-centered ratings — which is L19's Pearson $r$ between rating vectors; it comes user-user and
-  item-item.
+  mean-centered ratings. Between two users on complete vectors that is L19's Pearson $r$ — the angle
+  between two taste arrows; on a sparse matrix the lab's version (unrated = 0) shrinks thin overlaps.
+  It comes user-user and item-item, and a **support guard** keeps one enthusiastic neighbor from
+  becoming a recommendation.
 - **Cold start** breaks collaborative filtering for new users and items — the bridge to L23.
-- **Matrix factorization** learns latent user/item vectors: L18's matrix product and L20's PCA idea,
-  applied to recommendation — and it is what the Netflix Prize crowned.
+- **Matrix factorization** learns a **baseline** (global mean + user bias + item bias) plus latent
+  user/item vectors: L18's matrix product and L20's PCA idea, applied to recommendation — and it is
+  what the Netflix Prize crowned. The baseline does most of the work; the unnamed factors
+  personalize.
 
 ## Cheat-sheet
 
@@ -197,9 +286,11 @@ it maximizes watch time, and quietly encode bias from who rated what. These are 
 |---|---|
 | Build the ratings matrix | `ratings.pivot(index="user", columns="item", values="rating")`, then `.reindex` to the full user/item range |
 | Mean-center a user | subtract that user's average over rated movies |
-| User/item similarity | cosine of the mean-centered vectors (= L19 Pearson $r$) |
-| Score an unseen movie | neighbors' similarity-weighted (centered) ratings, add the user mean back |
-| Latent-factor prediction | $\hat{R} = P\,Q^\top$ (L18 matrix product; learn $P,Q$ by gradient descent) |
+| User similarity | cosine of the user-centered rows (= L19 Pearson $r$ on complete vectors; unrated = 0 on a sparse matrix) |
+| Item similarity | cosine of the columns of the same user-centered matrix (*adjusted cosine*: close to, but not, Pearson $r$ between items) |
+| Score an unseen movie | user mean + neighbors' similarity-weighted centered ratings |
+| Trust a score | require `min_support` neighbors who rated the movie (the lab uses 3 of 30) |
+| Latent-factor prediction | $\hat{r}_{ui}=\mu+b_u+b_i+p_u^\top q_i$ (baseline + L18 matrix product; learned by gradient descent) |
 
 ## Where to Go Deeper
 

@@ -5,14 +5,16 @@ lesson: "22"
 type: lab
 tags: [recommender-systems, collaborative-filtering, cosine-similarity, matrix-factorization, movielens]
 difficulty: intermediate
-duration: "40 mins"
+duration: "55 mins"
 ---
 
 **Goal:** build a movie recommender from nothing but a table of ratings -- no
-recommender library. You will construct the user-item matrix, find similar users
-and similar movies with cosine similarity, generate top-N recommendations, and
-finish with a small matrix-factorization model whose latent factors are the same
-idea you met in L18 (`P @ Q.T`) and L20 (PCA). Pairs with the concept note
+recommender library. You will start with the concept note's five-user toy (worked
+by hand), then build the real user-item matrix, find similar users and similar
+movies with cosine similarity, guard against flukes, generate top-N
+recommendations, and finish with a small matrix-factorization model whose latent
+factors are the same idea you met in L18 (`P @ Q.T`) and L20 (PCA). Pairs with the
+concept note
 [Recommender Systems & Collaborative Filtering](l22_concept_collaborative_filtering.qmd).
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/devomh/cdat4001-2026/blob/main/u06_recommender_systems/l22_lab_collaborative_filtering.ipynb)
@@ -60,6 +62,7 @@ GENRES = ["unknown", "Action", "Adventure", "Animation", "Children", "Comedy", "
           "Romance", "Sci-Fi", "Thriller", "War", "Western"]
 items = pd.read_csv("data/ml-100k/u.item", sep="|", encoding="latin-1",
                     names=["item", "title", "release", "video", "imdb"] + GENRES)
+title = items.set_index("item")["title"]   # movie id -> title, used everywhere below
 
 print("MovieLens 100k -- GroupLens / U. Minnesota (Harper & Konstan 2015); runtime download, not redistributed.")
 print("ratings:", ratings.shape, "| users:", users.shape, "| items:", items.shape)
@@ -145,11 +148,126 @@ ratings of people like you. That is collaborative filtering.
 
 **Collaborative filtering** predicts your taste from the crowd: find users who
 rated movies the way you did, then recommend what *they* liked that you have not
-seen. "Rated the way you did" needs a similarity measure. We use **cosine
-similarity** between two users' rating vectors -- the L18 operation -- but first we
-**mean-center** each user (subtract their average) so a generous rater and a harsh
-rater can still look similar. Mean-center, then cosine, is exactly L19's Pearson
-$r$ between rating vectors. Unrated movies are treated as 0.
+seen. Start where the concept note did: the **five-user toy**, small enough to
+check by hand. Ana has rated four movies; the other four users have rated all six.
+Ana has not seen *Speed* or *Aladdin* -- we will predict both.
+
+```python
+# The concept note's toy: 5 users x 6 movies (NaN = not seen)
+toy = pd.DataFrame(
+    [[5, 4, 1, 2, np.nan, np.nan],
+     [5, 5, 3, 3, 5, 3],
+     [3, 3, 1, 1, 3, 1],
+     [1, 2, 5, 4, 1, 5],
+     [4, 3, 4, 3, 3, 4]],
+    index=["Ana", "Beto", "Cami", "Dani", "Eli"],
+    columns=["Terminator", "TopGun", "ToyStory", "LionKing",
+             "Speed", "Aladdin"])
+shared = ["Terminator", "TopGun", "ToyStory", "LionKing"]
+
+def cosine(a, b):
+    return (a @ b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+ana = toy.loc["Ana", shared].to_numpy()
+rows = []
+for name in ["Beto", "Cami", "Dani", "Eli"]:
+    v = toy.loc[name, shared].to_numpy()
+    c = cosine(ana - ana.mean(), v - v.mean())   # center, then cosine
+    rows.append({"user": name,
+                 "raw_cos": cosine(ana, v),
+                 "centered_cos": c,
+                 "pearson_r": np.corrcoef(ana, v)[0, 1],
+                 "angle_deg": np.degrees(np.arccos(np.clip(c, -1, 1)))})
+sims = pd.DataFrame(rows).set_index("user").round(3) + 0.0
+print(sims.to_string())
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+      raw_cos  centered_cos  pearson_r  angle_deg
+user                                             
+Beto    0.966         0.949      0.949     18.435
+Cami    0.989         0.949      0.949     18.435
+Dani    0.565        -1.000     -1.000    180.000
+Eli     0.876         0.000      0.000     90.000
+~~~
+</details>
+
+> **Read it:** the raw cosine says everyone resembles Ana (0.57 to 0.99) --
+> all-positive ratings live in L18's positive corner, never more than 90 degrees
+> apart. Centering moves the arrows out of that corner: generous Beto and stingy
+> Cami become the *same* arrow (18.4 degrees from Ana), Eli is unrelated (90
+> degrees) and Dani is Ana's opposite (180 degrees). On complete vectors like
+> these, the centered cosine **is** Pearson's $r$ -- the two columns agree to
+> the last digit, as L19 promised.
+
+Now predict. Take the $k = 2$ most similar users, and add their
+similarity-weighted **centered** ratings to Ana's own average:
+
+$$\hat{r}_{\text{Ana},\,m} = \bar{r}_{\text{Ana}} + \frac{\sum_v s_v\,(r_{v,m} - \bar{r}_v)}{\sum_v |s_v|}$$
+
+```python
+k_nearest = sims["centered_cos"].sort_values(ascending=False, kind="stable").index[:2]
+print("k = 2 neighbors:", list(k_nearest))
+for movie in ["Speed", "Aladdin"]:
+    s = sims.loc[k_nearest, "centered_cos"]
+    centered = toy.loc[k_nearest, movie] - toy.loc[k_nearest].mean(axis=1)
+    pred = ana.mean() + (s * centered).sum() / s.abs().sum()
+    print(f"{movie}: {ana.mean():.2f} + {(s * centered).sum():.3f} / {s.abs().sum():.3f} = {pred:.2f}")
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+k = 2 neighbors: ['Beto', 'Cami']
+Speed: 3.00 + 1.898 / 1.898 = 4.00
+Aladdin: 3.00 + -1.898 / 1.898 = 2.00
+~~~
+</details>
+
+Both neighbors rated *Speed* one star above their own average and *Aladdin* one
+below, so Ana gets 3 + 1 = 4.00 and 3 - 1 = 2.00: an action fan should see the
+action movie.
+
+**Real users are not this tidy.** In MovieLens a typical pair of users shares
+only about 10 of the 1,682 movies, so the lab does three things more robustly
+than the toy:
+
+1. It compares over **all** 1,682 movies, not just the shared ones, counting
+   every unrated movie as 0 (that is, "at the user's own average", which is
+   taken over the movies that user rated). On complete vectors that is exactly $r$; on sparse ones it is a shrunk cousin
+   of $r$ (often called *adjusted cosine*): two users who share only a few movies
+   get a small score instead of a lucky $\pm 1$.
+2. It uses 30 neighbors instead of 2.
+3. It refuses to recommend a movie that too few of those neighbors rated (the
+   guard below).
+
+The cell below shows point 1 on the toy itself: Ana's two unseen movies now count
+as zeros, and every similarity shrinks.
+
+```python
+toy_c = toy.sub(toy.mean(axis=1), axis=0).fillna(0.0)   # center, unseen -> 0
+for name in ["Beto", "Cami", "Dani", "Eli"]:
+    s = cosine(toy_c.loc["Ana"].to_numpy(), toy_c.loc[name].to_numpy())
+    print(f"{name}: {s + 0.0:+.3f}")
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+Beto: +0.775
+Cami: +0.775
+Dani: -0.745
+Eli: +0.000
+~~~
+</details>
+
+Same ranking, smaller numbers: the toy's 0.949 becomes 0.775 because Ana's
+arrow now carries two zeros the others do not share. On the real matrix this is
+what keeps thin overlaps from looking like soulmates.
+
+Now the real thing: the same centering and cosine for all 943 users at once.
 
 ```python
 Rv = R.values.astype(float)
@@ -169,42 +287,77 @@ user-user similarity matrix: (943, 943)
 ~~~
 </details>
 
-To recommend for a user: take their $k$ most similar neighbors, and score each
-unseen movie by the neighbors' similarity-weighted, mean-centered ratings.
+To recommend for a user: take their $k$ most similar neighbors and score each
+unseen movie with the same formula as the toy. The function also counts the
+**support** of each movie -- how many of the $k$ neighbors actually rated it.
 
 ```python
-def recommend_user_based(uid, k=30, n=5):
-    u = uid - 1                                        # user ids are 1-based
-    neighbors = np.argsort(-sim[u])[:k]                # k most similar users
+def recommend_user_based(uid, k=30, n=5, min_support=1):
+    u = uid - 1                                   # user ids are 1-based
+    neighbors = np.argsort(-sim[u])[:k]           # k most similar users
     w = sim[u, neighbors]
-    num = w @ Rc[neighbors]                            # weighted sum of their (centered) ratings
-    den = np.abs(w) @ rated[neighbors].astype(float)   # total weight that actually rated each movie
-    scores = user_mean[u] + np.divide(num, den, out=np.full(n_items, -np.inf), where=den > 0)
-    scores[rated[u]] = -np.inf                         # drop movies u already rated
-    top = np.argsort(-scores, kind="stable")[:n]       # stable: equal scores break by item id, not sort internals
-    return [(items.set_index("item").loc[i + 1, "title"], scores[i]) for i in top]
+    num = w @ Rc[neighbors]                       # weighted (centered) ratings
+    den = np.abs(w) @ rated[neighbors].astype(float)
+    support = rated[neighbors].sum(axis=0)        # neighbors who rated each movie
+    scores = user_mean[u] + np.divide(
+        num, den, out=np.full(n_items, -np.inf), where=den > 0)
+    scores[support < min_support] = -np.inf       # the guard
+    scores[rated[u]] = -np.inf                    # drop movies u already rated
+    top = np.argsort(-scores, kind="stable")[:n]  # stable: ties break by item id
+    return [(title.loc[i + 1], scores[i], int(support[i])) for i in top]
 
-print("top-5 user-user recommendations for user 196:")
-for title, score in recommend_user_based(196):
-    print(f"{score:.2f}  {title}")
+print("top-5 for user 196, no guard:")
+for t, score, sup in recommend_user_based(196):
+    print(f"{score:.2f}  ({sup} of 30)  {t}")
 ```
 
 <details><summary>Expected Output</summary>
 
 ~~~text
-top-5 user-user recommendations for user 196:
-5.47  Andre (1994)
-5.35  Old Yeller (1957)
-5.35  Apartment, The (1960)
-5.12  Bean (1997)
-5.12  Story of Xinghua, The (1993)
+top-5 for user 196, no guard:
+5.47  (1 of 30)  Andre (1994)
+5.35  (1 of 30)  Old Yeller (1957)
+5.35  (1 of 30)  Apartment, The (1960)
+5.12  (1 of 30)  Bean (1997)
+5.12  (1 of 30)  Story of Xinghua, The (1993)
 ~~~
 </details>
 
-> **Interpretation:** these are personalized to user 196's neighbors, not the
-> global crowd-pleasers from Step 1. The scores can sit a little above 5 -- they
-> are *ranking* scores (a mean plus a weighted bump), not calibrated star
-> predictions. For ordering the recommendations, that is exactly what we need.
+> **Read it:** every one of these rests on a **single** neighbor out of 30 who
+> happened to love it -- *Story of Xinghua* has only 5 ratings in the whole
+> dataset. With one voter, the weighted average is just that voter's centered
+> rating (how far above their own average they rated it), added on top of user
+> 196's mean -- so the list is five individual opinions, not a consensus. (Scores above 5 are a
+> clue: these are *ranking* scores -- a mean plus a bump -- not star predictions.)
+
+### Better: require support from several neighbors   
+
+The fix is one line: only score a movie that at least `min_support` of the 30
+neighbors rated.
+
+```python
+print("top-5 for user 196, min_support=3:")
+for t, score, sup in recommend_user_based(196, min_support=3):
+    print(f"{score:.2f}  ({sup} of 30)  {t}")
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+top-5 for user 196, min_support=3:
+4.94  (5 of 30)  Shawshank Redemption, The (1994)
+4.79  (3 of 30)  My Life as a Dog (Mitt liv som hund) (1985)
+4.78  (3 of 30)  Remains of the Day, The (1993)
+4.74  (6 of 30)  Usual Suspects, The (1995)
+4.70  (7 of 30)  Boot, Das (1981)
+~~~
+</details>
+
+> **Interpretation:** now each pick is backed by 3 to 7 like-minded users, and the
+> list is still personal: none of these five is on Step 1's crowd-pleaser list.
+> The guard is a trade-off:
+> raise it and the list drifts toward movies *everyone* rated (you will see this
+> in Exercise 1).
 
 ## Step 3: Item-Item Collaborative Filtering (Worked + Completion)
 
@@ -227,23 +380,17 @@ item-item similarity matrix: (1682, 1682)
 ~~~
 </details>
 
-A movie rated by only a handful of people can look spuriously similar to anything
-by chance, so production systems only trust a neighbor with at least a minimum
-number of ratings (`min_count`). Our popular movies clear that bar easily.
+For a well-rated movie like Star Wars, no guard is needed: a rarely rated movie
+shares only a few of Star Wars' many nonzero cells, so its cosine with Star Wars
+stays small -- the zero-filling of Step 2 does the guarding. Query a *rarely*
+rated movie, though, and its nearest neighbors are other rare movies rated by
+the same few people, at cosines near 1: there the guard would be needed again.
 
 ```python
-counts = ratings.groupby("item").rating.count()
-title = items.set_index("item")["title"]
-
-def similar_movies(movie_id, n=5, min_count=50):
+def similar_movies(movie_id, n=5):
     i = movie_id - 1
-    out = []
-    for j in np.argsort(-S[i]):                 # most similar movies first
-        if counts.get(j + 1, 0) >= min_count:   # popularity guard
-            out.append((title.loc[j + 1], S[i, j]))
-        if len(out) >= n:
-            break
-    return out
+    top = np.argsort(-S[i], kind="stable")[:n]   # most similar movies first
+    return [(title.loc[j + 1], S[i, j]) for j in top]
 
 print(f"Movies most similar to {title.loc[50]}:")
 for t, s in similar_movies(50):
@@ -305,10 +452,10 @@ Q_toy = np.array([[1.0, 0.0],    # Die Hard       -- action
                   [0.1, 0.1],    # a documentary  -- neither
                   [0.4, 0.9]])   # a rom-com      -- mostly romance
 R_hat_toy = P_toy @ Q_toy.T      # (4 x 2) @ (2 x 5) = 4 users x 5 movies
-toy = pd.DataFrame(np.round(R_hat_toy, 2),
-                   index=["Ana", "Beto", "Cami", "Deni"],
-                   columns=["DieHard", "Notebook", "Smith", "Doc", "RomCom"])
-print(toy.to_string())
+toy_mf = pd.DataFrame(np.round(R_hat_toy, 2),
+                      index=["Ana", "Beto", "Cami", "Deni"],
+                      columns=["DieHard", "Notebook", "Smith", "Doc", "RomCom"])
+print(toy_mf.to_string())
 ```
 
 <details><summary>Expected Output</summary>
@@ -324,10 +471,20 @@ Deni      0.2       0.2   0.30  0.04    0.26
 
 The action fan scores highest on Die Hard, the romance fan on the Notebook and the
 rom-com, and the user who likes both tops out on the movie that has both factors --
-all from one matrix multiply. Now the real thing: we don't know the factors, so we
-**learn** $P$ and $Q$ from the observed ratings by **stochastic gradient descent**
-(nudge each factor toward reducing the error on one rating at a time). This trains
-on all 100k ratings -- give it up to a minute.
+all from one matrix multiply. Here we *named* the two factors; a learned model will
+not.
+
+Now the real thing. Real predictions have a **baseline** that has nothing to do
+with taste: the global average rating (`gmean`), how generous this user is
+(`bu`, the user bias) and how well-liked this movie is (`bi`, the item bias). The
+model is
+
+$$\hat{r}_{ui} = \mu + b_u + b_i + p_u^\top q_i$$
+
+and we **learn** all of it from the observed ratings by **stochastic gradient
+descent** (nudge every term toward reducing the error on one rating at a time).
+This trains on all 100k ratings -- about 15 seconds on a laptop, give it a little
+longer on Colab.
 
 ```python
 user_ids = {u: k for k, u in enumerate(sorted(ratings.user.unique()))}
@@ -346,6 +503,7 @@ for epoch in range(epochs):
     rng.shuffle(data_arr)
     for u, i, r in data_arr:
         u, i = int(u), int(i)
+        # prediction = baseline (gmean + bu + bi) + factor match P[u] @ Q[i]
         err = r - (gmean + bu[u] + bi[i] + P[u] @ Q[i])
         bu[u] += lr * (err - reg * bu[u]); bi[i] += lr * (err - reg * bi[i])
         Pu = P[u].copy()
@@ -368,11 +526,11 @@ def recommend_mf(uid, n=5):
     seen = ratings[ratings.user == uid].item.map(item_ids).values
     scores[seen] = -np.inf                          # drop already-rated movies
     top = np.argsort(-scores, kind="stable")[:n]       # stable: equal scores break by item id, not sort internals
-    return [(items.set_index("item").loc[inv_item[j], "title"], scores[j]) for j in top]
+    return [(title.loc[inv_item[j]], scores[j]) for j in top]
 
 print("top-5 matrix-factorization recommendations for user 196:")
-for title, score in recommend_mf(196):
-    print(f"{score:.2f}  {title}")
+for t, score in recommend_mf(196):
+    print(f"{score:.2f}  {t}")
 print("user 196 latent vector (first 5 of 20 factors):", np.round(P[user_ids[196]][:5], 2))
 ```
 
@@ -389,36 +547,163 @@ user 196 latent vector (first 5 of 20 factors): [-0.02  0.07 -0.17 -0.03 -0.01]
 ~~~
 </details>
 
-> **Interpretation:** 20 learned factors per user and movie give a calibrated
-> prediction on the 1-5 scale, and store far less than a 1682 x 1682 similarity
-> matrix. Each row of `P` is a user's coordinates in a hidden taste space -- the
-> same kind of low-dimensional embedding PCA gave you in L20, now learned directly
-> from ratings. **Does it predict held-out ratings better than the neighborhood
-> methods?** That is the measurement we make in L23.
+> **Interpretation:** these look like Step 1's crowd-pleasers, and that is no
+> accident: the item bias `bi` (how well-liked a movie is overall) carries most
+> of what lifts each score above the global average, and the factors re-order the list at the margin -- Exercise 4
+> takes one prediction apart. Each row of `P` is a user's coordinates in a hidden
+> taste space -- the same kind of low-dimensional embedding PCA gave you in L20,
+> now learned from ratings -- but the 20 axes come **unnamed**: unlike the toy's
+> "action" and "romance", most learned factors are mixtures that no single label
+> fits. And 20 numbers per user and movie store far less than a 1682 x 1682
+> similarity matrix. **Do these predictions match ratings the model has never
+> seen?** We have not measured that -- the model was fit on every rating. That is
+> the measurement L23 makes.
 
 ## Your Turn (Exercises)
 
-### Exercise 1 -- Recommend for another user
+### Exercise 1 -- Another user, and the guard
+
+Pick any user id from 1 to 943. Loop `min_support` over 1, 3 and 5 for that
+user and print each top-5 user-based list with its support counts.
+In two sentences: what happens to the list as the guard rises, and why does a
+high guard drift toward Step 1's crowd-pleasers?
+
 ```python
-# TODO: pick any user id from 1..943 and print their top-5 user-based
-# recommendations (call recommend_user_based).
+# TODO: your code here
 ```
 
-### Exercise 2 -- Written: the cold-start problem
+<details><summary>Expected Output (for user 1 -- your user will differ)</summary>
+
+~~~text
+min_support=1
+5.56  (1 of 30)  Flirt (1995)
+5.51  (1 of 30)  Once Upon a Time... When We Were Colored (1995)
+5.51  (1 of 30)  High Noon (1952)
+5.51  (1 of 30)  Thirty-Two Short Films About Glenn Gould (1993)
+5.51  (1 of 30)  Great Day in Harlem, A (1994)
+min_support=3
+5.11  (4 of 30)  Die xue shuang xiong (Killer, The) (1989)
+5.10  (4 of 30)  Big Sleep, The (1946)
+5.08  (3 of 30)  Once Upon a Time in the West (1969)
+4.97  (12 of 30)  Close Shave, A (1995)
+4.95  (4 of 30)  Secrets & Lies (1996)
+min_support=5
+4.97  (12 of 30)  Close Shave, A (1995)
+4.87  (15 of 30)  Casablanca (1942)
+4.86  (10 of 30)  L.A. Confidential (1997)
+4.86  (6 of 30)  Duck Soup (1933)
+4.85  (9 of 30)  Maltese Falcon, The (1941)
+~~~
+*(With no guard, all five picks rest on one neighbor each -- "A Great Day in
+Harlem" has a single rating in the whole dataset. At 3, the picks are backed by
+3-12 neighbors and mostly personal (a Hong Kong action film, film noir, a
+Western), though Step 1's number one, A Close Shave, already slips in. At 5,
+Casablanca joins it and the list reads like a classics shelf: only movies that
+MANY people rated can collect five votes from a 30-user sample, and those are
+the popular ones. The guard buys trust at the price of some
+personalization.)*
+</details>
+
+### Exercise 2 -- "Because you liked...": item-based top-N for a user
+
+Step 3 listed movies similar to *one* movie. Turn it into recommendations for a
+**user**: score every movie by the **sum** of its item-item similarities `S` to
+the movies user 196 rated **5**, drop the movies 196 has already rated, and
+print the top 5 with their scores.
+
+> **Hint:** `loved = np.where(Rv[195] == 5)[0]` gives the column indexes of the
+> 5-star movies (user 196 is row 195). `S[:, loved].sum(axis=1)` sums each
+> movie's similarity to all of them at once. Reuse `rated[195]` to drop seen
+> movies.
+
+```python
+# TODO: your code here
+```
+
+<details><summary>Expected Output (one possible answer -- match the values, not the print format)</summary>
+
+~~~text
+0.95  Amadeus (1984)
+0.91  To Kill a Mockingbird (1962)
+0.91  Glory (1989)
+0.90  Gandhi (1982)
+0.89  Shawshank Redemption, The (1994)
+~~~
+*(Five acclaimed dramas, each close to several of the movies 196 loved. Why a
+plain **sum**? It rewards a movie that is similar to many loved movies. A
+similarity-**weighted average** of the user's ratings -- the Step 2 formula
+turned sideways -- divides by the total similarity, which cancels the
+shrinkage: a movie with one rater and a tiny similarity to a few of the user's
+movies can still top the list. Try it and you will meet the Step 2 flukes again
+(Coldblooded, 4.69, rated by one person); the weighted version needs Step 2's
+support guard.)*
+</details>
+
+### Exercise 3 -- Written: the cold-start problem
+
 A brand-new user has just signed up and rated **nothing**. Explain in 2-3
 sentences why `recommend_user_based` cannot help them yet, and which approach
 from the concept note's family table you would use instead, and why.
 
+**Your answer:**
+
+<details><summary>One possible answer</summary>
+
+A new user has an empty rating row: there is no average to center on and no
+movie to compare, so every similarity with them is 0, they have no real
+neighbors, and no movie can collect any support. That is the
+cold-start problem. A **demographic** approach can still recommend from what
+users of the same age group or occupation liked, and a **knowledge-based** one
+can simply ask what they want; both need no rating history (L23 builds them).
+</details>
+
+### Exercise 4 -- Take a prediction apart
+
+For user 196's top matrix-factorization pick, print its four parts -- `gmean`,
+`bu[u]`, `bi[i]` and `P[u] @ Q[i]` -- and their sum. Then rank user 196's
+unseen movies by the **baseline alone** (`gmean + bu[u] + bi`) and compare its
+top 5 with `recommend_mf(196)`. In two sentences: how much do the latent factors
+change, and what is the baseline really recommending?
+
+```python
+# TODO: your code here
+```
+
+<details><summary>Expected Output (one possible answer -- match the values, not the print format)</summary>
+
+~~~text
+Schindler's List (1993): 3.530 + -0.017 + 0.984 + 0.178 = 4.675
+baseline-only top-5:
+4.55  Pather Panchali (1955)
+4.50  Schindler's List (1993)
+4.49  Casablanca (1942)
+4.46  Close Shave, A (1995)
+4.45  Shawshank Redemption, The (1994)
+~~~
+*(The item bias (+0.984) is more than five times the factor term (+0.178),
+and the baseline alone already picks 4 of the MF top 5. Within one user, `bu`
+adds the same constant to every movie, so it never changes the order: the
+baseline ranking is simply a ranking by `bi`, a shrunk version of Step 1's
+highest-rated list, the same for every user apart from the movies they have
+already rated. The factors are what make it personal -- they
+lifted To Kill a Mockingbird into user 196's list -- but on this data they
+nudge the order rather than rewrite it.)*
+</details>
+
 ## Summary
 
 - A recommender starts from the sparse **user-item matrix** (here 93.7% empty).
-- **Collaborative filtering** turns the crowd into personalization via **cosine
-  similarity** on mean-centered ratings (= L19's Pearson $r$) -- between users
-  (Step 2) or movies (Step 3), with no library.
-- A **popularity guard** keeps rarely-rated items from producing spurious matches.
-- **Matrix factorization** learns latent user/movie vectors so that
-  $\hat{R} = P\,Q^\top$ -- L18's matrix product and L20's PCA idea, applied to
-  recommendation.
+- **Collaborative filtering** turns the crowd into personalization. On the toy,
+  the centered cosine between two users **is** L19's Pearson $r$ -- the angle between taste arrows;
+  on the sparse matrix the lab uses its practical cousin (center on each user's
+  mean, unrated = 0), which damps thin overlaps -- between users (Step 2) or
+  movies (Step 3), with no library.
+- A **support guard** (`min_support`) keeps one enthusiastic neighbor from
+  producing a "recommendation"; raising it trades personalization for trust.
+- **Matrix factorization** learns a baseline (global mean + user bias + item
+  bias) plus the taste match $P\,Q^\top$ of latent user/movie vectors -- L18's
+  matrix product and L20's PCA idea, applied to recommendation. The baseline
+  does most of the work; the unnamed factors personalize at the margin.
 - We **generated** recommendations but did not yet **measure** them. Next, **L23**
   adds content-, knowledge-, and demographic-based recommenders and shows how to
   evaluate every approach.
