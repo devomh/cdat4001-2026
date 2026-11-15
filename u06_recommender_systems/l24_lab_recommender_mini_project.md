@@ -96,7 +96,9 @@ relevant = held-out items rated >= 4 (a 'liked' movie)
 
 Three candidates: a **popularity** baseline (recommend the most-rated movies to everyone --
 no personalization), **item-item collaborative filtering**, and **matrix factorization**. The
-CF and MF code is exactly L22's, trained here on the training split.
+MF code and the item-item similarity are exactly L22's. To predict a rating, CF here takes the
+similarity-weighted average of the user's own centered ratings -- the version L22's Exercise 2
+warned about. Both are trained on the training split.
 
 ```python
 gm = train.rating.mean()
@@ -222,6 +224,11 @@ matrix factorization p@10: 0.070
 ~~~
 </details>
 
+> **Why is CF so low?** Look at what it recommends: most of its top-10 picks (83%) are movies
+> with fewer than 20 ratings in the training split. A weighted average divides by the total
+> similarity, so a movie that one person rated and that is faintly similar to a few of yours can
+> score at the very top -- the flood L22's Exercise 2 showed. Exercise 3 adds a guard.
+
 ## Step 4: Reconcile and Decide
 
 Put the two metrics side by side.
@@ -276,7 +283,7 @@ Both results are real, and together they are the whole lesson:
   neither does.
 - **So which do you ship?** Not pure popularity: it gives everyone the identical list, adds no
   personalization, and feeds the filter bubble (L23). You ship a **personalized** model
-  (matrix factorization is the stronger of the two here) **measured on the metric that matches
+  (matrix factorization is the stronger of the two here -- though see Exercise 3) **measured on the metric that matches
   the product** -- a ranking metric, not RMSE -- and you keep popularity as the baseline to
   beat and as the **cold-start** default for brand-new users (then personalize as ratings
   arrive, the L23 plan). The honest report gives your manager *both* numbers and names the
@@ -296,7 +303,39 @@ Both results are real, and together they are the whole lesson:
 # build its score matrix, and add a row to the two-metric leaderboard. Where does it land?
 ```
 
-### Exercise 3 -- the decision (written, 4-6 sentences)
+### Exercise 3 -- Guard the rankings
+
+Let a movie into anyone's top 10 only if it has **at least 20 ratings in the training split**,
+then re-run precision@10 for CF and MF (leave popularity as it is: its lists are made of the
+most-rated movies already). First measure the problem: what share of CF's unguarded top-10 picks have fewer
+than 20 training ratings? Then answer: does the guarded CF still lose to MF on ranking, does
+either beat popularity, and does your Exercise 4 decision change?
+
+> **Hint:** `ok = pop_score >= 20` is one True/False per movie (`pop_score` holds each movie's
+> training-rating count). `np.where(ok, pred_cf, -np.inf)` sends every guarded-out movie to the
+> bottom of every user's list, so you can pass it straight to `precision_at_k`.
+
+```python
+# TODO: your code here
+```
+
+<details><summary>Expected Output (one possible answer -- match the values, not the print format)</summary>
+
+~~~text
+CF top-10 picks with < 20 training ratings: 83%
+guarded CF precision@10: 0.093
+guarded MF precision@10: 0.078
+popularity precision@10: 0.135  (unguarded, as before)
+~~~
+*(The guard nearly triples CF's precision (0.032 -> 0.093) and nudges MF up (0.070 -> 0.078):
+both were partly losing to obscure titles, CF far more. Guarded, CF now out-ranks MF -- while MF
+still wins RMSE (0.922 vs 0.945), so the two leaderboards disagree even about which
+personalized model is better. Popularity still wins at 0.135, so the main lesson stands: a
+personalized model has to beat popularity on the metric that matches the product, and a sensible
+guard is part of building it.)*
+</details>
+
+### Exercise 4 -- the decision (written, 4-6 sentences)
 Write the paragraph your manager asked for: **which recommender would you ship and why**,
 **which metric you would optimize and why it matches the product**, and **your plan for
 brand-new users** (the cold-start problem from L22/L23). Use the numbers from your table.

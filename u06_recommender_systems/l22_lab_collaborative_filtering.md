@@ -384,7 +384,8 @@ For a well-rated movie like Star Wars, no guard is needed: a rarely rated movie
 shares only a few of Star Wars' many nonzero cells, so its cosine with Star Wars
 stays small -- the zero-filling of Step 2 does the guarding. Query a *rarely*
 rated movie, though, and its nearest neighbors are other rare movies rated by
-the same few people, at cosines near 1: there the guard would be needed again.
+the same few people, at cosines near 1: there you would need a guard on the
+*candidate* movies -- a minimum number of ratings per movie.
 
 ```python
 def similar_movies(movie_id, n=5):
@@ -635,8 +636,11 @@ similarity-**weighted average** of the user's ratings -- the Step 2 formula
 turned sideways -- divides by the total similarity, which cancels the
 shrinkage: a movie with one rater and a tiny similarity to a few of the user's
 movies can still top the list. Try it and you will meet the Step 2 flukes again
-(Coldblooded, 4.69, rated by one person); the weighted version needs Step 2's
-support guard.)*
+(Coldblooded, 4.69, rated by one person). Counting supporting neighbors does
+not fix it here -- with at least 3 of the user's movies behind each score,
+three of the top five still have a single rating. What works for item-based scores is a
+minimum number of ratings per *movie*: with at least 20, the weighted average
+tops out with The Piano and White Squall.)*
 </details>
 
 ### Exercise 3 -- Written: the cold-start problem
