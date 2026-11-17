@@ -230,8 +230,8 @@ You will *generate* recommendations in the lab — personalized top-N lists, sim
 factorized prediction matrix. They will look plausible. But "looks plausible" is not a measurement.
 **How do we know a recommender is any good?** Hide some ratings, predict them, and score the error
 (RMSE/MAE) — and beyond predicting ratings, how well does the *ranking* match what users actually
-want? That is **L23**: the other approaches *and* how to evaluate all of them, including the famous
-ladder where each idea beats the last.
+want? That is **L23**: the other approaches *and* how to evaluate all of them, including an
+accuracy ladder that measures how much of the work this lesson's baseline really does.
 
 ::: {.column-margin}
 **Libraries for the real thing.** You build these by hand to see the mechanics.
