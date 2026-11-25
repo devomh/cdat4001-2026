@@ -46,7 +46,7 @@ and its purpose is to help the material stick, not to rank you.
 | [IV — Data Mining](u04_data_mining/l11_concept_feature_engineering.qmd) | L11–L15 | Features from raw and from text data; filter-based selection; decision trees and random forests — closing with a **mini-project** on what predicts higher income |
 | [V — Visualization](u05_visualization/l16_concept_spatial_visualization.qmd) | L16–L17, L19–L21 | Mapping Puerto Rico earthquakes; 65 years of San Juan climate; correlation and its blind spots; PCA; finding groups and outliers |
 | [Foundations — Linear Algebra](foundations/l18_concept_linear_algebra.qmd) | L18 | Vectors, dot products, and projection — the machinery behind correlation, PCA, and recommenders. Taught between L17 and L19 |
-| [VI — Recommender Systems](u06_recommender_systems/l22_concept_collaborative_filtering.qmd) | L22–L24 | Collaborative, content-based, and hybrid recommenders on MovieLens; how to evaluate them — closing with a **mini-project** on which one you would ship |
+| [VI — Recommender Systems](u06_recommender_systems/l22_concept_collaborative_filtering.qmd) | L22–L24 | Collaborative, content-based, and hybrid recommenders on MovieLens; how to evaluate them — closing with a **mini-project** on book ratings (goodbooks-10k): which recommender would you ship? |
 | [VII — Social Networks](u07_social_networks/l25_concept_social_networks_graphs.qmd) | L25–L26 | Relationships as graphs; adjacency matrices and centrality; detecting communities |
 | [VIII — Governance](u08_governance/l27_concept_data_ethics.qmd) | L27–L28 | Data ethics through documented cases; GDPR, HIPAA, FERPA, and Puerto Rico law |
 
