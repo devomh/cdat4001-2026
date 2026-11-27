@@ -17,7 +17,7 @@ By the end of this lesson you will be able to:
 - **Compute and interpret** **degree** and **centrality** (degree, betweenness, closeness) to find the important nodes — and explain why the three measures can disagree. *(Apply / Analyze)*
 - **Extract** a node's **ego network** and **read** local structure (neighbours, clustering, components, distances). *(Apply)*
 
-> **Where this sits:** **Unit VI** asked "who is similar to whom?" from a ratings *table* · this lesson opens **Unit VII**, where the data *is* the relationships, so the right object is a **graph** · it cashes in **L18**'s promise that the adjacency matrix is "just a matrix" · **L26** takes the same graph and finds its *communities*.
+> **Where this sits:** **Unit VI** asked "who is similar to whom?" from a ratings *table* · this lesson opens **Unit VII**, where the data *is* the relationships, so the right object is a **graph** · it puts **L18**'s matrix operations to work on that graph, its **adjacency matrix** · **L26** takes the same graph and finds its *communities*.
 
 > **Hands-on:** [Lab — Social Networks as Graphs with NetworkX](l25_lab_social_networks_graphs.md) ·
 > [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/{{< var repo.org >}}/{{< var repo.name >}}/blob/{{< var repo.branch >}}/u07_social_networks/l25_lab_social_networks_graphs.ipynb)
@@ -33,9 +33,10 @@ away the very thing you wanted to study: the **structure of the relationships**.
 The right object is a **graph** (also called a **network**): a set of **nodes** (the things) joined by
 **edges** (the connections). Once your data is a graph, a whole toolbox opens up — you can ask who is
 *central*, which nodes are *bridges*, how *tight-knit* a neighbourhood is, and (next lesson) which nodes
-form *communities*. And the engine underneath is one you already built: in **L18** you learned that a
-table is a matrix; a graph, it turns out, is **also** a matrix — its **adjacency matrix** — and the same
-dot products and matrix products you drilled there now answer questions about who-knows-whom.
+form *communities*. And the engine underneath is one you already built: **L18** listed social-network
+graphs among the topics that run on the same few matrix operations. A graph, it turns out, **is** a
+matrix — its **adjacency matrix** — and the matrix-vector and matrix-matrix products you drilled there
+now answer questions about who-knows-whom.
 
 The running example is the most famous small network in data science.
 
@@ -60,7 +61,15 @@ them. That is the whole definition — everything else is vocabulary for talking
 | **Path** | A sequence of edges from one node to another. |
 | **Shortest path** | The fewest-edge route between two nodes. |
 | **Connected component** | A group of nodes you can reach from each other by some path. |
-| **Density** | The fraction of all *possible* edges that actually exist. |
+| **Density** | The fraction of all *possible* edges that actually exist (formula below). |
+
+An undirected graph on $n$ nodes has $n(n-1)/2$ possible edges (every pair, counted once), so a graph
+with $m$ edges has
+
+$$\text{density} = \frac{m}{n(n-1)/2}.$$
+
+The karate club has $78$ edges among $34$ members: $78 / 561 = 0.139$. Only about 14% of the possible
+friendships exist: the graph is **sparse**, and large social networks are far sparser still.
 
 Two choices fix the *kind* of graph:
 
@@ -69,8 +78,9 @@ Two choices fix the *kind* of graph:
   citation, a one-way street. Karate-club friendship is undirected.
 - **Weighted vs. unweighted.** An **unweighted** edge just says *connected or not*. A **weighted** edge
   carries a number — strength, distance, number of interactions. The built-in karate club actually
-  stores interaction-count weights on its edges; when we only care about *who is tied to whom* we drop
-  the weights and use the **binary** view (edge present = 1, absent = 0).
+  stores a weight on each edge: the number of settings in which the two members interacted. When we
+  only care about *who is tied to whom* we drop the weights and use the **binary** view (edge present
+  = 1, absent = 0).
 
 ## A Graph Is a Matrix
 
@@ -83,7 +93,11 @@ That table is the **adjacency matrix**. For an undirected graph it is **symmetri
 because if `i` is tied to `j` then `j` is tied to `i`). The same network, drawn as a picture and written
 as a matrix, is the same object two ways:
 
-![Left: Zachary's Karate Club drawn as a node-link diagram, with each node sized by its degree and the two leaders (Mr. Hi and the Officer) marked in red as the largest hubs. Right: the same network as a 34 by 34 binary adjacency matrix heatmap; filled cells mark friendships and the matrix is symmetric about the diagonal, with two visibly denser blocks foreshadowing the club's two factions. The caption notes that A[i, j] = 1 when i and j are friends and that each row sum equals that node's degree.](assets/l25_network_and_matrix.png)
+![Zachary's Karate Club as a picture and as a matrix: the same object two ways.](assets/l25_network_and_matrix.png){fig-alt="Left: Zachary's Karate Club drawn as a node-link diagram, with each node sized by its degree. The two leaders, Mr. Hi (node 0, degree 16) and the Officer (node 33, degree 17), are marked in red and sit on opposite sides of the drawing; the third-largest hub, node 32, sits just above and to the right of the Officer. Right: the same network as a 34 by 34 binary adjacency matrix heatmap in node order 0 to 33; filled cells mark friendships, the matrix is symmetric about the diagonal, and the most visible pattern is the long dark bands of row and column 0 and row and column 33, the two leaders. The subtitle reads: A[i, j] = 1 when i and j are friends, and the row sum of A is the degree."}
+
+In the picture the two leaders sit on opposite sides, each surrounded by members who lean their way. In
+the matrix the most visible pattern is the long dark bands of row and column 0 and row and column 33:
+the two leaders' many friendships, one filled cell each.
 
 And now the L18 operations *mean something*:
 
@@ -94,8 +108,37 @@ And now the L18 operations *mean something*:
   gives a table whose `(i, j)` entry is the number of length-2 paths from `i` to `j` — that is, how many
   **friends `i` and `j` share**. On the diagonal, `(A @ A)[i, i]` is just node `i`'s degree again.
 
-This is exactly what L18 meant by "Unit VII: the adjacency matrix." The graph is not a new kind of math
-— it is linear algebra wearing a different hat.
+L18 listed social-network graphs among the topics that run on "the same five operations"; these are two
+of them at work. The graph is not a new kind of math — it is linear algebra wearing a different hat.
+
+### A Worked Example by Hand
+
+Four people and four friendships: Ana and Beto, Ana and Cami, Beto and Cami, Cami and Dani. Number
+them in that order (Ana, Beto, Cami, Dani) and write the adjacency matrix and its square $AA$ (the lab's
+`A @ A`):
+
+$$
+\begin{aligned}
+A &= \begin{bmatrix} 0 & 1 & 1 & 0 \\ 1 & 0 & 1 & 0 \\ 1 & 1 & 0 & 1 \\ 0 & 0 & 1 & 0 \end{bmatrix} \\[6pt]
+AA &= \begin{bmatrix} 2 & 1 & 1 & 1 \\ 1 & 2 & 1 & 1 \\ 1 & 1 & 3 & 0 \\ 1 & 1 & 0 & 1 \end{bmatrix}
+\end{aligned}
+$$
+
+Read it the way L18 taught you: entry $(i, j)$ of $AA$ is row $i$ of $A$ dotted with column $j$. A term
+of that dot product is 1 only when some person $k$ is a friend of both $i$ and $j$.
+
+- **The diagonal is the degrees:** 2, 2, 3, 1. Ana's row dotted with itself counts Ana's own friends.
+- **Cami and Dani are friends, yet $(AA)_{\text{Cami},\text{Dani}} = 0$.** Cami's friends are Ana,
+  Beto, and Dani; Dani's only friend is Cami. No third person is a friend of both, and the edge between
+  them does not count as a shared friend.
+- **Ana and Dani are not friends, yet $(AA)_{\text{Ana},\text{Dani}} = 1$.** They share one friend:
+  Cami.
+
+So `A @ A` is **not** `A`: it does not say who is connected, it counts the friends two people have in
+common. That second reading has an immediate use. Among pairs who are **not** yet friends, the ones with
+many shared friends are the natural "people you may know" suggestions — here, Ana and Dani (and Beto
+and Dani). It is Unit VI's "people like you" idea again, with shared friends in place of shared ratings.
+The lab ranks every non-friend pair of the karate club this way.
 
 ## Who Is Important? Centrality
 
@@ -103,20 +146,25 @@ A natural question about any network is *which nodes matter most*. There is no s
 "important" can mean different things — so there are several **centrality** measures, each capturing a
 different intuition:
 
-- **Degree centrality** — *how many* connections a node has (its degree, scaled to `[0, 1]`). The
-  "social butterfly": lots of direct ties.
-- **Betweenness centrality** — how often a node sits **on the shortest path** between other pairs. The
-  **broker** or **bridge**: remove it and parts of the network drift apart. A node can have modest
-  degree but high betweenness if it is the only link between two groups.
-- **Closeness centrality** — how **near** a node is to everyone else, on average (short distances to all
-  others). The well-positioned node that can reach the whole network quickly.
+- **Degree centrality** — *how many* connections a node has: its degree divided by $n-1$, the most
+  friends anyone could have, so it lands in $[0, 1]$. The Officer: $17/33 = 0.515$. The "social
+  butterfly": lots of direct ties.
+- **Betweenness centrality** — how often a node sits **on the shortest paths** between other pairs. The
+  **broker** or **bridge**: many routes run through it, so removing it makes many of those routes longer — and
+  if it is the **only** link between two groups, removing it cuts the graph in two. A node can have
+  modest degree but high betweenness if it links groups that are otherwise far apart.
+- **Closeness centrality** — how **near** a node is to everyone else: $n-1$ divided by the sum of its
+  shortest-path distances to all other nodes. Mr. Hi's 33 distances add up to 58, so his closeness is
+  $33/58 = 0.569$. The well-positioned node that can reach the whole network quickly.
 
 The instructive part is that **these can disagree**. In the karate club the Officer has the *most ties*
 (top degree), but Mr. Hi is the best *bridge* (top betweenness) and the most central by distance (top
-closeness). If you only ranked by degree you would miss that Mr. Hi is the structural linchpin. Choosing
-the right centrality is a modelling decision, not a default. (Two more — **PageRank** and **eigenvector
-centrality**, which weight a node by the importance of *its* neighbours — are where this goes next;
-named here, not pursued.)
+closeness). The difference is not academic. Remove Mr. Hi and the club falls into three pieces (27, 5,
+and 1 members); remove the Officer, who has *more* ties, and it stays in one piece — its paths just get
+longer (on average from 2.41 to 2.60 hops). Ranking by degree alone would have pointed at the wrong
+person. Choosing the right centrality is a modelling decision, not a default. (Two more — **PageRank**
+and **eigenvector centrality**, which weight a node by the importance of *its* neighbours — are natural
+next steps beyond this course; named here, not pursued.)
 
 ## Local Structure: Ego Networks and Clustering
 
@@ -128,7 +176,8 @@ Two local readings:
 
 - **Clustering coefficient** of a node — of all the *pairs* of its neighbours, what fraction are
   themselves connected? High clustering means "my friends are friends with each other" — a tight-knit
-  clique. Social networks are famously high-clustering.
+  clique. Social networks are famously high-clustering. (Despite the name, this is not L21's
+  clustering of points into groups; that idea returns in L26 as *communities*.)
 - **Distances and components.** Is the graph one connected piece, or several? How many edges separate
   the two most distant nodes (the **diameter**)? Real social graphs are **small worlds**: even hundreds
   of nodes are typically just a few hops apart.
@@ -173,9 +222,9 @@ binary (0/1) form here because we care about the *structure* of ties; `nx.to_num
 forces it even when the graph stores weights.
 
 **Which centrality should I use?**
-It depends on the question. "Who has the most direct reach?" — degree. "Who is the critical bridge
-whose removal fragments the network?" — betweenness. "Who can reach everyone fastest?" — closeness.
-Report more than one; their disagreements are informative.
+It depends on the question. "Who has the most direct reach?" — degree. "Who sits on the routes between
+groups, so that losing them would slow the network down or even cut it?" — betweenness. "Who can reach
+everyone fastest?" — closeness. Report more than one; their disagreements are informative.
 
 **Do I need the adjacency matrix if NetworkX computes degree for me?**
 Not for degree itself — but the matrix view is how many graph algorithms are actually defined and
@@ -193,6 +242,7 @@ friends. It is the same data NetworkX stores, made explicit.
 | Binary adjacency matrix | `A = nx.to_numpy_array(G, weight=None)` |
 | Degree from the matrix | `A.sum(axis=1)` |
 | Shared-neighbour counts | `A @ A` (off-diagonal entries) |
+| Friend suggestions | the largest `(A @ A)[i, j]` among pairs with `A[i, j] == 0` |
 | The important nodes | `nx.betweenness_centrality(G)` (and friends) |
 | One node's local world | `nx.ego_graph(G, v, radius=1)` |
 
@@ -201,5 +251,5 @@ friends. It is the same data NetworkX stores, made explicit.
 - **NetworkX documentation** — tutorial and the algorithms reference (`networkx.org`).
 - **SNAP (Stanford Network Analysis Project)** — real network datasets, including the Facebook
   ego-networks the original case study used.
-- **Barabasi, *Network Science* (free online), Chapter 2** — graphs, degree distributions, and why
-  social networks are heavy-tailed small worlds.
+- **Barabasi, *Network Science* (free online), Chapter 2** — graphs and degree distributions; later
+  chapters cover the heavy-tailed degree distributions and short paths of large real networks.

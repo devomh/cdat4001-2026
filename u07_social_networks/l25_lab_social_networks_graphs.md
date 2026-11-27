@@ -5,13 +5,14 @@ lesson: "25"
 type: lab
 tags: [graphs, networks, networkx, adjacency-matrix, centrality, ego-network, karate-club]
 difficulty: intermediate
-duration: "65 mins"
+duration: "70 mins"
 ---
 
 **Goal:** turn a set of relationships into a **graph** you can measure. You will build and inspect a
 network in NetworkX, write it as an **adjacency matrix** and run the L18 matrix operations on it (row
 sums give degree, `A @ A` counts shared friends), find the important nodes with three kinds of
-**centrality**, and zoom into a node's **ego network**. The running graph is Zachary's Karate Club --
+**centrality**, zoom into a node's **ego network**, and finish by suggesting new friends and testing
+what happens when a central member leaves. The running graph is Zachary's Karate Club --
 34 members, 78 friendships -- which ships inside NetworkX. Pairs with the concept note
 [Social Networks as Graphs](l25_concept_social_networks_graphs.qmd).
 
@@ -59,14 +60,16 @@ Loaded Zachary's Karate Club: 34 nodes, 78 edges.
 A graph is nodes plus edges. NetworkX lets you ask it anything: is it directed? how dense? who are a
 node's neighbours? Node `0` is the instructor ("Mr. Hi") and node `33` is the club president ("the
 Officer") -- the two who later split the club. The `club` attribute records which faction each member
-ended up in; we only *name* it here (community detection is L26).
+ended up in; we use it in Step 2 to reorder the matrix (and once more in Exercise 2). Finding the
+factions *without* it is L26's job (community detection).
 
 ```python
 print("Directed?", G.is_directed())
 print("Nodes:", G.number_of_nodes(), "| Edges:", G.number_of_edges())
 print("Density:", round(nx.density(G), 4))
 print("Neighbours of node 0:", sorted(G.neighbors(0)))
-print("Friends with node 1?", G.has_edge(0, 1), "| with node 9?", G.has_edge(0, 9))
+print("Node 0 friends with node 1?", G.has_edge(0, 1),
+      "| with node 9?", G.has_edge(0, 9))
 print("Node 0 club:", G.nodes[0]["club"], "| node 33 club:", G.nodes[33]["club"])
 ```
 
@@ -77,14 +80,17 @@ Directed? False
 Nodes: 34 | Edges: 78
 Density: 0.139
 Neighbours of node 0: [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 17, 19, 21, 31]
-Friends with node 1? True | with node 9? False
+Node 0 friends with node 1? True | with node 9? False
 Node 0 club: Mr. Hi | node 33 club: Officer
 ~~~
 </details>
 
-The graph is **undirected** (friendship is mutual) and **sparse** (density 0.139 -- only ~14% of all
-possible friendships exist). One subtlety: the built-in edges carry an interaction-count **weight**, so
-this is technically a weighted graph. We will take the **binary** view (tie present or not) in Step 2.
+The graph is **undirected** (friendship is mutual) and **sparse**. Density is the number of edges
+divided by the number of possible pairs, `n(n-1)/2` for an undirected graph: `78 / (34 x 33 / 2) =
+78 / 561 = 0.139`, so only about 14% of all possible friendships exist. One subtlety: each built-in
+edge carries a **weight** -- the number of settings in which the two members interacted -- so this is
+technically a weighted graph. We take the **binary** view (tie present or not) in Step 2, and come back
+to the weights in Exercise 1.
 
 ```python
 print("Edge (0, 1) stored data:", G.get_edge_data(0, 1))
@@ -98,16 +104,18 @@ Edge (0, 1) stored data: {'weight': 4}
 </details>
 
 A picture builds intuition. We lay the graph out with a force-directed (`spring`) layout, size each node
-by its degree, and mark the two leaders.
+by its degree, and mark the two leaders. Nodes are drawn largest first, so a smaller node that lands
+next to a big one is drawn on top of it instead of hidden behind it.
 
 ```python
 deg = dict(G.degree())
 pos = nx.spring_layout(G, seed=42)   # fixed seed -> reproducible layout
+big_first = sorted(G.nodes(), key=lambda n: -deg[n])
 
 plt.figure(figsize=(8, 6))
 nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color="#888888")
-nx.draw_networkx_nodes(G, pos,
-                       node_size=[30 + 60 * deg[n] for n in G.nodes()],
+nx.draw_networkx_nodes(G, pos, nodelist=big_first,
+                       node_size=[30 + 60 * deg[n] for n in big_first],
                        node_color="#9bb7d4", edgecolors="#444444", linewidths=0.5)
 nx.draw_networkx_labels(G, pos, labels={0: "Mr. Hi", 33: "Officer"}, font_size=9)
 plt.title("Zachary's Karate Club")
@@ -115,11 +123,18 @@ plt.axis("off")
 plt.show()
 ```
 
-You can build a graph from scratch too -- just hand NetworkX an edge list. Here is a tiny 4-node graph.
+The two biggest nodes, Mr. Hi and the Officer, sit in different parts of the drawing, and most members
+gather around one of them. A layout like this places tightly linked nodes close together, which is
+why node 32 (the third-largest hub, 12 friends) lands right next to the Officer: they share many
+friends.
+
+You can build a graph from scratch too -- just hand NetworkX an edge list. Here is a tiny 4-person
+graph (the same one the concept page works through by hand).
 
 ```python
 H = nx.Graph()
-H.add_edges_from([("A", "B"), ("A", "C"), ("B", "C"), ("C", "D")])
+H.add_edges_from([("Ana", "Beto"), ("Ana", "Cami"),
+                  ("Beto", "Cami"), ("Cami", "Dani")])
 print("H:", H.number_of_nodes(), "nodes,", H.number_of_edges(), "edges")
 print("H degrees:", dict(H.degree()))
 ```
@@ -128,21 +143,30 @@ print("H degrees:", dict(H.degree()))
 
 ~~~text
 H: 4 nodes, 4 edges
-H degrees: {'A': 2, 'B': 2, 'C': 3, 'D': 1}
+H degrees: {'Ana': 2, 'Beto': 2, 'Cami': 3, 'Dani': 1}
 ~~~
 </details>
 
-Node `C` has degree 3 (tied to A, B, and D); `D` has degree 1 (only tied to C). Reading degree off a
-graph is just counting edges.
+Cami has degree 3 (tied to Ana, Beto, and Dani); Dani has degree 1 (only tied to Cami). Reading degree
+off a graph is just counting edges.
 
-**Try it (completion).** Predict the effect, then run it: attach a new node to `H` and re-read the degrees.
+**Try it (completion).** Predict the effect, then run it: attach a new person to `H` and re-read the
+degrees.
 
 ```python
-# Completion: attach a new node "E" to "D" only, then reprint H's degrees.
-# D's degree should rise by 1 and E's should be 1. Uncomment and complete:
-# H.add_edge("D", "___")
+# Completion: attach a new node "Eli" to "Dani" only, then reprint H's degrees.
+# Predict first: whose degree changes, and to what? Uncomment and complete:
+# H.add_edge("Dani", "___")
 # print("H degrees:", dict(H.degree()))
 ```
+
+<details><summary>Expected Output (when completed correctly)</summary>
+
+~~~text
+H degrees: {'Ana': 2, 'Beto': 2, 'Cami': 3, 'Dani': 2, 'Eli': 1}
+~~~
+*(Adding one edge raises the degree of both ends: Dani goes from 1 to 2, and Eli enters with 1.)*
+</details>
 
 ## Step 2 -- The adjacency matrix (the L18 bridge)
 
@@ -215,8 +239,16 @@ Check with NetworkX: 4
 # print("row sum:", int(A[node].sum()), "| G.degree:", G.degree(node))
 ```
 
-A picture of `A` makes the structure pop: two denser blocks around the two leaders, with a thin bridge
-between them -- the split is already visible in the matrix.
+<details><summary>Expected Output (when completed correctly, node 5)</summary>
+
+~~~text
+row sum: 4 | G.degree: 4
+~~~
+</details>
+
+Now a picture of `A`. In the natural order `0..33`, the two leaders stand out: row and column 0 (Mr.
+Hi) and row and column 33 (the Officer) are the long dark bands along the edges of the picture, because
+they have the most friends. Any other pattern is hard to see.
 
 ```python
 plt.figure(figsize=(6, 5))
@@ -226,6 +258,49 @@ plt.xlabel("node j"); plt.ylabel("node i")
 plt.colorbar(label="edge (1) / no edge (0)", shrink=0.8)
 plt.show()
 ```
+
+The node numbers are arbitrary, so we may list the nodes in any order. Suppose we **already know** which
+faction each member joined after the split (the `club` attribute) and list Mr. Hi's faction first, then
+the Officer's. Same graph, same friendships -- only the order of the rows and columns changes.
+
+```python
+club = nx.get_node_attributes(G, "club")
+order = ([n for n in sorted(G.nodes()) if club[n] == "Mr. Hi"]
+         + [n for n in sorted(G.nodes()) if club[n] == "Officer"])
+A_sorted = nx.to_numpy_array(G, nodelist=order, dtype=int, weight=None)
+k = sum(1 for n in G.nodes() if club[n] == "Mr. Hi")
+
+print("Mr. Hi's faction:", k, "members | the Officer's:", len(order) - k)
+print("Friendships inside Mr. Hi's faction:", int(A_sorted[:k, :k].sum()) // 2)
+print("Friendships inside the Officer's    :", int(A_sorted[k:, k:].sum()) // 2)
+print("Friendships across the two factions :", int(A_sorted[:k, k:].sum()))
+
+plt.figure(figsize=(6, 5))
+plt.imshow(A_sorted, cmap="Blues", interpolation="nearest")
+plt.axhline(k - 0.5, color="red", linewidth=1)
+plt.axvline(k - 0.5, color="red", linewidth=1)
+plt.title("The same A, nodes listed by faction")
+plt.xlabel("position j (Mr. Hi's faction first)")
+plt.ylabel("position i")
+plt.show()
+```
+
+<details><summary>Expected Output</summary>
+
+~~~text
+Mr. Hi's faction: 17 members | the Officer's: 17
+Friendships inside Mr. Hi's faction: 35
+Friendships inside the Officer's    : 32
+Friendships across the two factions : 11
+~~~
+</details>
+
+Two dense blocks appear on the diagonal, and the two off-diagonal blocks are almost empty: 67 of the 78
+friendships stay inside a faction and only 11 cross. (Inside a block we divide by 2 because each
+friendship appears twice in a symmetric matrix; the cross block `A_sorted[:k, k:]` holds each crossing
+friendship once.) But notice what we cheated with: we used the **answer** -- who actually joined whom --
+to choose the order. **L26** asks the real question: can an algorithm find an order like this from the
+friendships alone, without the labels?
 
 ## Step 3 -- Degree and the degree distribution
 
@@ -253,17 +328,21 @@ Mean degree: 4.588 | min: 1 | max: 17
 ~~~
 </details>
 
-The two leaders (33 and 0) are far and away the **hubs**. Most members have only a couple of friends.
-That shape -- a few high-degree hubs, a long tail of low-degree nodes -- is the **heavy-tailed degree
-distribution** typical of social networks.
+The two leaders (33 and 0) are far and away the **hubs**. The histogram below shows the rest: most
+members have only 2 to 4 friends. The distribution is **skewed** -- a few hubs, many members with few
+ties. Large social networks (millions of users) show the extreme version of this shape, a
+*heavy-tailed* degree distribution; 34 nodes are too few to say more than "skewed".
 
 ```python
 plt.figure(figsize=(7, 4))
 plt.hist(list(dict(G.degree()).values()), bins=range(0, 19), edgecolor="white")
-plt.title("Degree distribution (heavy-tailed)")
+plt.title("Degree distribution (skewed: a few hubs)")
 plt.xlabel("degree"); plt.ylabel("number of nodes")
 plt.show()
 ```
+
+The tallest bar is degree 2 (11 members); 23 of the 34 members have degree 2, 3, or 4, and only five
+have 9 or more.
 
 **Try it (completion).** Read one node's degree two ways and confirm they agree.
 
@@ -273,11 +352,20 @@ plt.show()
 # print("from Series:", degree_series[2], "| from matrix:", int(A[2].sum()))
 ```
 
+<details><summary>Expected Output (when completed correctly)</summary>
+
+~~~text
+from Series: 10 | from matrix: 10
+~~~
+</details>
+
 ## Step 4 -- Centrality: who is important?
 
-Degree is one notion of "important". **Betweenness** counts how often a node is on the shortest path
-between others (a *bridge*); **closeness** measures how near a node is to everyone else. Let us compute
-all three and compare their top five.
+Degree is one notion of "important". **Degree centrality** is the degree divided by `n - 1`, the
+largest degree possible (node 33: `17 / 33 = 0.515`). **Betweenness** measures how often a node lies on
+the shortest paths between other pairs (a *bridge*). **Closeness** measures how near a node is to
+everyone else: `n - 1` divided by the sum of its distances to all other nodes (node 0: its 33 distances
+add up to 58, so `33 / 58 = 0.569`). Let us compute all three and compare their top five.
 
 ```python
 def top5(d):
@@ -303,15 +391,17 @@ Top 5 CLOSENESS  : [(0, 0.569), (2, 0.559), (33, 0.55), (31, 0.541), (8, 0.516)]
 
 The measures **disagree**, and that is the lesson. The Officer (node 33) has the **most ties** (top
 degree), but Mr. Hi (node 0) is the best **bridge** (top betweenness) and the most central by distance
-(top closeness). Rank only by degree and you would miss that node 0 is the structural linchpin -- the
-broker the whole network routes through. Let us colour the graph by betweenness to see the bridges.
+(top closeness). Rank only by degree and you would miss that node 0 is the main **broker**: more
+shortest paths between other members run through Mr. Hi than through anyone else (Exercise 3 tests
+what happens when he leaves). Let us colour the graph by betweenness to see the bridges.
 
 ```python
-bet_vals = [bet_c[n] for n in G.nodes()]
+bet_vals = [bet_c[n] for n in big_first]
 plt.figure(figsize=(8, 6))
 nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color="#888888")
-nodes = nx.draw_networkx_nodes(G, pos, node_color=bet_vals, cmap="plasma",
-                               node_size=[30 + 60 * deg[n] for n in G.nodes()])
+nodes = nx.draw_networkx_nodes(G, pos, nodelist=big_first,
+                               node_color=bet_vals, cmap="plasma",
+                               node_size=[30 + 60 * deg[n] for n in big_first])
 plt.colorbar(nodes, label="betweenness centrality", shrink=0.8)
 plt.title("Karate Club coloured by betweenness (brighter = bigger bridge)")
 plt.axis("off")
@@ -321,10 +411,20 @@ plt.show()
 **Try it (completion).** Name the single top node by each measure.
 
 ```python
-# Completion: print the highest-ranked node of each centrality (first item of each
-# top5 list). Which node leads degree? which leads betweenness? Complete:
-# print("top degree:", top5(deg_c)[0], "| top betweenness:", top5(bet_c)[0])
+# Completion: print the highest-ranked node of each centrality. top5(d)[0] is the
+# (node, value) pair in first place, so top5(d)[0][0] is the node. Complete the
+# closeness entry, then uncomment:
+# print("top degree:", top5(deg_c)[0][0],
+#       "| top betweenness:", top5(bet_c)[0][0],
+#       "| top closeness:", top5(___)[0][0])
 ```
+
+<details><summary>Expected Output (when completed correctly)</summary>
+
+~~~text
+top degree: 33 | top betweenness: 0 | top closeness: 0
+~~~
+</details>
 
 ## Step 5 -- Ego networks and local structure
 
@@ -370,37 +470,162 @@ plt.title("Ego network of node 0 (Mr. Hi)")
 plt.show()
 ```
 
+Mr. Hi's 16 friends have only 18 friendships among themselves (34 edges in the ego network, minus his
+own 16) out of 120 possible pairs -- that is his clustering of 0.15. A hub's friends tend to come from
+different circles that do not know each other.
+
+**Try it (completion).** Do the same for the other leader: build the Officer's (node 33) ego network
+and read the Officer's clustering coefficient. Is the Officer also a hub whose friends mostly do not
+know each other?
+
+```python
+# Completion: replace each ___ and uncomment.
+# ego33 = nx.ego_graph(G, ___, radius=1)
+# print("Officer's ego network:", ego33.number_of_nodes(), "nodes,",
+#       ego33.number_of_edges(), "edges")
+# print("Clustering coefficient of node 33:", round(nx.clustering(G, ___), 3))
+```
+
+<details><summary>Expected Output (when completed correctly)</summary>
+
+~~~text
+Officer's ego network: 18 nodes, 32 edges
+Clustering coefficient of node 33: 0.11
+~~~
+*(Yes: 17 friends, but only 15 friendships among them out of 136 possible pairs. Both leaders sit
+far below the club's average clustering of 0.571 -- each one is friends with many people who are not
+friends with each other.)*
+</details>
+
 ## Your Turn (Exercises)
 
-### Exercise 1 -- Build a graph and read it
+### Exercise 1 -- Weighted vs. binary row sums
+
+Step 2 built `A` with `weight=None`. Build the **weighted** matrix instead -- leave out `weight=None`,
+so each entry holds the number of settings in which the two members interacted -- and print, for nodes
+0 and 33, the weighted row sum next to the binary row sum (the degree). Why are they different, and
+which one is the degree?
+
+> **Hint:** `W = nx.to_numpy_array(G, nodelist=sorted(G.nodes()))`; then compare `W[n].sum()` with
+> `A[n].sum()`.
+
 ```python
-# TODO: build an undirected graph from this edge list, then print its number of
-# nodes and edges and the degree of each node. Which node has the highest degree?
-# edges = [(1, 2), (1, 3), (2, 3), (3, 4), (3, 5), (4, 5), (5, 6)]
+# TODO: your code here
 ```
 
-### Exercise 2 -- Count shared friends with the matrix
+<details><summary>One possible answer (code, output, reading)</summary>
+
+~~~python
+W = nx.to_numpy_array(G, nodelist=sorted(G.nodes()))
+for n in [0, 33]:
+    print(f"node {n}: weighted row sum {int(W[n].sum())} | "
+          f"binary row sum {int(A[n].sum())}")
+~~~
+~~~text
+node 0: weighted row sum 42 | binary row sum 16
+node 33: weighted row sum 48 | binary row sum 17
+~~~
+*(The binary row sum counts **ties** -- that is the degree (16 and 17). The weighted row sum adds up
+the **strength** of each tie: Mr. Hi's 16 friendships add up to 42 interaction settings, the Officer's
+17 add up to 48. Both are useful numbers, but only the binary one is the degree, which is why Step 2
+passed `weight=None` before checking "row sum = degree". On this graph the two happen to rank the top
+five members in the same order (33, 0, 32, 2, 1); on another graph a member with few but intense ties
+could rank high by strength and low by degree.)*
+</details>
+
+### Exercise 2 -- "People you may know"
+
+A friend-suggestion feature looks for two people who are **not** friends yet but share many friends.
+`A2 = A @ A` already counts the shared friends of every pair. Loop over all pairs `(i, j)` with
+`i < j` and `A[i, j] == 0`, and print the three pairs with the most shared friends (break ties by the
+smaller node number first). Then look up both members of each pair in `club`: would these suggestions
+stay inside a faction?
+
+> **Hint:** collect `(A2[i, j], i, j)` tuples in a list and sort it with
+> `key=lambda p: (-p[0], p[1], p[2])`.
+
 ```python
-# TODO: using A2 = A @ A, print how many friends nodes 0 and 2 share, then verify
-# with list(nx.common_neighbors(G, 0, 2)). Do the two numbers match?
+# TODO: your code here
 ```
 
-### Exercise 3 -- Written: spotting a broker
-Node `31` ranks 5th in **betweenness** (0.138) yet has a degree of only **6** -- well below the leaders
-(16 and 17) and even below nodes 2 and 32. In 2-3 sentences, explain what a node with high betweenness
-*relative to its degree* represents in a social network, and why removing such a broker could fragment
-the graph more than removing a higher-degree node.
+<details><summary>One possible answer (code, output, reading)</summary>
+
+~~~python
+pairs = []
+for i in range(len(A)):
+    for j in range(i + 1, len(A)):
+        if A[i, j] == 0:
+            pairs.append((int(A2[i, j]), i, j))
+pairs.sort(key=lambda p: (-p[0], p[1], p[2]))
+for shared, i, j in pairs[:3]:
+    print(f"nodes {i} and {j}: {shared} shared friends "
+          f"({club[i]} / {club[j]})")
+~~~
+~~~text
+nodes 2 and 33: 6 shared friends (Mr. Hi / Officer)
+nodes 0 and 33: 4 shared friends (Mr. Hi / Officer)
+nodes 7 and 13: 4 shared friends (Mr. Hi / Mr. Hi)
+~~~
+*(This is Unit VI's "people like you" idea on a graph: shared friends play the role that shared
+ratings played for recommenders. The top suggestion pairs node 2 (Mr. Hi's faction) with the Officer,
+and the second pairs the two leaders themselves -- 4 shared friends, yet they are rivals and the club
+split between them. Only 7 and 13 are in the same faction. Shared friends say that two people move in
+the same circles, not that they would get along: a real system learns from which suggestions people
+accept.)*
+</details>
+
+### Exercise 3 -- What if a member leaves?
+
+Step 4 said that betweenness finds the **brokers** -- the members that many shortest paths run
+through. Test what that means. Make a copy of `G`, remove node 0 (top betweenness), and print how many
+connected pieces are left and their sizes. Repeat with node 33 (top degree). Which removal splits the
+club, and which centrality from Step 4 would have warned you?
+
+> **Hint:** `G_cut = G.copy(); G_cut.remove_node(0)`; the sizes are
+> `[len(c) for c in nx.connected_components(G_cut)]`.
+
+```python
+# TODO: your code here
+```
+
+<details><summary>One possible answer (code, output, reading)</summary>
+
+~~~python
+for v in [0, 33]:
+    G_cut = G.copy()
+    G_cut.remove_node(v)
+    sizes = sorted((len(c) for c in nx.connected_components(G_cut)),
+                   reverse=True)
+    print("without node", v, "->", len(sizes), "piece(s), sizes", sizes)
+~~~
+~~~text
+without node 0 -> 3 piece(s), sizes [27, 5, 1]
+without node 33 -> 1 piece(s), sizes [33]
+~~~
+*(Removing Mr. Hi splits the club into three pieces: member 11, whose only friend was Mr. Hi, and a
+group of five (4, 5, 6, 10, 16) that reached the rest of the club only through him. Removing the
+Officer -- who has **more** ties -- leaves the club in one piece; its paths just get longer (the
+average shortest-path length rises from 2.408 to 2.597). Degree did not warn you; **betweenness** did,
+because it measures who sits on the routes between others. (Closeness also ranks Mr. Hi first, but it
+measures how near he is to everyone, not whether other members' routes pass through him.) It is a
+warning, not a guarantee: a node with high betweenness makes many routes longer when it leaves, and it
+cuts the graph only when it is the **only** route between two parts. In this club Mr. Hi is the only member whose removal disconnects
+anyone.)*
+</details>
 
 ## Summary
 
 - A **graph** is nodes plus edges; choose **directed/undirected** and **weighted/unweighted** to match
   the relationship. NetworkX builds, inspects, measures, and draws it.
 - A graph is also a **matrix**: the **adjacency matrix** `A`. The L18 operations now mean something --
-  **row sum = degree** (`A @ ones`) and **`A @ A` = common-neighbour counts** (with degree on the
-  diagonal).
-- **Centrality** ranks importance, and the flavours **disagree**: degree (most ties), betweenness (the
-  bridge), closeness (nearest to all). Report more than one.
+  **row sum = degree** (`A @ ones`, with `weight=None`) and **`A @ A` = common-neighbour counts** (with
+  degree on the diagonal). Shared-friend counts on non-friends give friend suggestions.
+- Listing the nodes by faction turns `A` into two dense blocks -- but only because we used the labels.
+- **Centrality** ranks importance, and the flavours **disagree**: degree (most ties), betweenness (on
+  the most shortest paths: the broker), closeness (nearest to all). Report more than one. Removing the
+  top-betweenness member split the club; removing the top-degree member did not.
 - An **ego network** is one node's local world; **clustering**, **components**, and short **distances**
-  describe local cohesion and the small-world structure.
+  describe local cohesion and the small-world structure. The degree distribution is skewed: a few hubs,
+  most members with 2 to 4 friends.
 - We measured *one graph's* local structure. **L26** asks the global question: do the nodes form
   **communities**, and can an algorithm recover the karate club's two real factions from structure alone?
